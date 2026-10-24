@@ -220,6 +220,15 @@ async def vapi_webhook(request: Request, tasks: BackgroundTasks):
             results.append({"name": name, "toolCallId": tc_id, "result": json.dumps(out, ensure_ascii=False)})
         return {"results": results}
 
+    if mtype == "conversation-update":
+        roles = {"user": "user", "bot": "assistant", "assistant": "assistant"}
+        lines = [(roles[m["role"]], (m.get("message") or m.get("content") or "").strip())
+                 for m in msg.get("messages") or [] if m.get("role") in roles]
+        lines = [(role, text) for role, text in lines if text]
+        if lines:
+            db.replace_transcript(call.get("id", "unknown"), lines)
+        return {}
+
     if mtype.startswith("transcript"):
         final = mtype != "transcript" or msg.get("transcriptType") == "final"
         if final and msg.get("transcript"):

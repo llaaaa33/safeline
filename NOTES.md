@@ -12,3 +12,6 @@
 - `seed.local.json` (gitignored) overrides `seed.json` so real phone numbers stay out of git.
 - Added `scripts/configure_vapi_number.py` (sets the number's Server URL, detaches any fixed assistant) and `python -m app.notify` (Discord test).
 - Free Vapi numbers can't place outbound calls; the demo uses a Twilio number imported into Vapi.
+- Live transcript comes from `conversation-update` (full conversation after every turn, stored idempotently per call). Subscribing to `transcript[transcriptType="final"]` delivered nothing in a real call.
+- Deepgram `keyterm` prompting for English (`plank`, `scaffold`, zone names, …): the first real call heard "plank" as "tank".
+- Tunnel: cloudflared with `--protocol http2`. Over QUIC on a phone hotspot, Vapi's ~20 KB `assistant-request` body stalled and Vapi hung up (`assistant-request-returned-error`).

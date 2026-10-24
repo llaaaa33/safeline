@@ -54,8 +54,16 @@ def lang_cfg(language: str) -> dict:
     return LANGUAGES.get(language, LANGUAGES["en"])
 
 
+# Deepgram keyterm prompting: jobsite words it otherwise mishears ("plank" -> "tank").
+KEYTERMS = ["SafeLine", "scaffold", "plank", "ladder", "harness", "Zone A", "Zone B", "Zone C", "loading dock"]
+
+
 def _transcriber(language: str) -> dict:
-    return {"provider": "deepgram", "model": "nova-3", "language": language if language in LANGUAGES else "en"}
+    language = language if language in LANGUAGES else "en"
+    transcriber = {"provider": "deepgram", "model": "nova-3", "language": language}
+    if language == "en":
+        transcriber["keyterm"] = KEYTERMS
+    return transcriber
 
 
 def _report_tools(zone_ids: list[str], webhook_url: str) -> list[dict]:
@@ -119,7 +127,8 @@ def build_inbound_assistant(worker: dict, zones: list[dict], webhook_url: str) -
         "endCallMessage": cfg["goodbye"],
         "maxDurationSeconds": 180,
         "server": {"url": webhook_url},
-        "serverMessages": ["tool-calls", 'transcript[transcriptType="final"]', "status-update", "end-of-call-report"],
+        # conversation-update carries the whole conversation after every turn (drives the live transcript)
+        "serverMessages": ["tool-calls", "conversation-update", "status-update", "end-of-call-report"],
     }
 
 

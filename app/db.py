@@ -126,6 +126,16 @@ def add_transcript(call_id: str, role: str, text: str) -> None:
     _exec("INSERT INTO transcripts (call_id, role, text, ts) VALUES (?,?,?,?)", (call_id, role, text, now()))
 
 
+def replace_transcript(call_id: str, lines: list[tuple[str, str]]) -> None:
+    """Replace a call's transcript with the full conversation so far (idempotent)."""
+    ts = now()
+    with _lock:
+        _conn.execute("DELETE FROM transcripts WHERE call_id = ?", (call_id,))
+        _conn.executemany("INSERT INTO transcripts (call_id, role, text, ts) VALUES (?,?,?,?)",
+                          [(call_id, role, text, ts) for role, text in lines])
+        _conn.commit()
+
+
 def get_state() -> dict:
     hazards = _query("SELECT * FROM hazards ORDER BY id DESC LIMIT 20")
     alerts = _query(
