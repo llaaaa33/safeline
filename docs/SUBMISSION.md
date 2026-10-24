@@ -46,4 +46,4 @@ A hazard seen by one worker reaches the safety manager in seconds, in English, w
 - **Docs, not memory.** Claude checked every Vapi API field (webhook payloads, tool-call response format, transcriber languages, voices) against the live documentation instead of guessing.
 - **Simulator first.** Claude wrote a call simulator and mocked end-to-end checks so the flow was verified before spending real call minutes.
 - **Debugging from real logs.** When the first real call hung up, Claude traced it from the Vapi call record and server log to the tunnel (large webhook bodies stalling over QUIC on a phone hotspot) and switched it to HTTP/2; it also fixed misheard words ("plank" → "tank") with Deepgram keyterms and empty captions by switching to `conversation-update`.
-- **Design.** Claude used a UI/UX design skill to pick an operations-dashboard design system (dark, high-contrast, safety orange) for the manager screen.
+- **Design.** Claude used a UI/UX design skill (accessibility, touch targets, semantic status colors) to design a light, minimal manager screen.

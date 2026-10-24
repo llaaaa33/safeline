@@ -11,4 +11,4 @@
 - Repeated `toolCallId`s are ignored (no double logging). Unknown zone in `report_hazard`: nothing stored, the model is told to ask which zone.
 - Emergencies are stored with `hazard_type = "EMERGENCY"`, `severity = high`; zone may be `unknown`.
 - Tunnel: cloudflared with `--protocol http2`. Over QUIC on a phone hotspot, Vapi's ~20 KB `assistant-request` body stalled and Vapi hung up (`assistant-request-returned-error`). The venue Wi-Fi blocked new quick tunnels, so the laptop runs on a phone hotspot.
-- Dashboard design: dark OLED, industrial slate + safety orange (ui-ux-pro-max "Real-Time / Operations"), SVG icons, ≥44 px resolve targets, focus rings, reduced-motion respected.
+- Dashboard design: light and minimal (white surfaces, thin dividers, Inter); color only carries status (red emergency, amber open, green resolved). SVG icons, ≥44 px resolve targets, focus rings, reduced-motion respected.
