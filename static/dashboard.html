@@ -32,7 +32,7 @@
   #banner .small { font-size: 20px; opacity: 0.9; margin-top: 4px; }
   @keyframes alarm { 50% { background: #5c0b0d; } }
 
-  main { display: grid; grid-template-columns: 1fr 1.45fr 1fr; gap: 18px; padding: 18px 28px; flex: 1; min-height: 0; }
+  main { display: grid; grid-template-columns: 1.35fr 1.3fr 1fr; gap: 18px; padding: 18px 28px; flex: 1; min-height: 0; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
     display: flex; flex-direction: column; min-height: 0; }
   section h2 { margin: 0; padding: 14px 18px; font-size: 18px; text-transform: uppercase; letter-spacing: 1.5px;
@@ -42,7 +42,9 @@
   .row { border-radius: 10px; padding: 12px 14px; margin-top: 8px; background: #1a212c; transition: background-color 0.6s; }
   .row.new { background: var(--flash); }
 
-  .line { padding: 8px 10px; margin-top: 6px; border-radius: 10px; font-size: 21px; }
+  .line { padding: 10px 12px; margin-top: 8px; border-radius: 10px; font-size: 25px; line-height: 1.35; }
+  #transcript-panel h2 { color: var(--text); }
+  #transcript-panel h2 small { color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 15px; margin-left: 8px; }
   .line .who { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: block; }
   .line.user { background: #1d2635; } .line.user .who { color: var(--info); }
   .line.assistant { background: #18241f; } .line.assistant .who { color: var(--ok); }
@@ -86,7 +88,7 @@
 </header>
 <div id="banner" title="Click to acknowledge"><div class="big"></div><div class="small"></div></div>
 <main>
-  <section><h2>Live transcript</h2><div class="list" id="transcript"></div></section>
+  <section id="transcript-panel"><h2>🎧 Live call <small>what the worker says and hears — no screen on their side</small></h2><div class="list" id="transcript"></div></section>
   <section><h2>Hazard feed</h2><div class="list" id="hazards"></div></section>
   <section><h2>Alerts</h2><div class="list" id="alerts"></div></section>
 </main>
@@ -138,7 +140,7 @@ function renderBanner(hazards) {
 
 function renderTranscript(lines) {
   const box = document.getElementById("transcript");
-  if (!lines.length) { box.innerHTML = '<div class="empty">Waiting for a call…</div>'; return; }
+  if (!lines.length) { box.innerHTML = '<div class="empty">Waiting for a worker to call SafeLine…</div>'; return; }
   box.innerHTML = "";
   for (const l of lines) {
     const el = document.createElement("div");
