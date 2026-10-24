@@ -4,122 +4,247 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SafeLine — Safety Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+  /* Design tokens: dark OLED, industrial slate + safety orange (ui-ux-pro-max "Real-Time / Operations") */
   :root {
-    --bg: #0b0e13; --panel: #141922; --line: #232b38; --text: #e8edf4; --muted: #8b97a8;
-    --high: #ff4d4f; --medium: #ff9f1a; --low: #f5d90a; --ok: #2ecc71; --info: #4ea8ff;
-    --flash: rgba(78, 168, 255, 0.28);
+    --bg: #05070a;
+    --surface: #0f141b;
+    --surface-2: #161d27;
+    --border: #243040;
+    --text: #f1f5f9;
+    --text-2: #a3b1c2;
+    --accent: #f97316;        /* safety orange */
+    --accent-ink: #1a0b00;
+    --danger: #ef4444;
+    --danger-deep: #7f1d1d;
+    --warn: #f59e0b;
+    --ok: #22c55e;
+    --ok-ink: #04130a;
+    --focus: #fdba74;
+    --radius: 14px;
+    --space: 8px;
+    --font: "Barlow", system-ui, "Segoe UI", sans-serif;
+    --font-display: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font: 20px/1.4 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif; }
-  body { display: flex; flex-direction: column; }
-  header { display: flex; align-items: baseline; gap: 24px; padding: 18px 28px 14px; border-bottom: 1px solid var(--line); }
-  header h1 { margin: 0; font-size: 34px; }
-  header h1 span { color: var(--high); }
-  header p { margin: 0; color: var(--muted); font-size: 20px; flex: 1; }
-  .pill { font-size: 15px; color: var(--muted); white-space: nowrap; border: 1px solid var(--line);
-    border-radius: 999px; padding: 4px 12px; }
-  #sound.off { color: var(--medium); border-color: var(--medium); cursor: pointer; }
-  #live::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    background: var(--ok); margin-right: 8px; }
-  #live.down::before { background: var(--high); }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 18px/1.5 var(--font); }
+  body { display: flex; flex-direction: column; min-height: 100dvh; }
+  svg.icon { width: 1.1em; height: 1.1em; flex: none; stroke: currentColor; fill: none; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.18em; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-  #banner { display: none; margin: 16px 28px 0; padding: 18px 24px; border-radius: 14px; background: #b3171a;
-    color: #fff; cursor: pointer; animation: alarm 1s infinite; }
-  #banner.show { display: block; }
-  #banner .big { font-size: 34px; font-weight: 800; }
-  #banner .small { font-size: 20px; opacity: 0.9; margin-top: 4px; }
-  @keyframes alarm { 50% { background: #5c0b0d; } }
+  /* ---------- header ---------- */
+  header { display: flex; align-items: center; gap: calc(var(--space) * 3); padding: 16px 28px;
+    border-bottom: 1px solid var(--border); background: var(--surface); }
+  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .brand-mark { width: 48px; height: 48px; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; }
+  .brand-mark svg { width: 28px; height: 28px; stroke-width: 2.25; }
+  .brand h1 { margin: 0; font: 700 32px/1 var(--font-display); letter-spacing: 0.5px; }
+  .brand p { margin: 2px 0 0; color: var(--text-2); font-size: 15px; }
+  .kpis { display: flex; gap: 12px; margin-left: auto; }
+  .kpi { min-width: 128px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .kpi b { display: block; font: 700 34px/1.05 var(--font-display); font-variant-numeric: tabular-nums; }
+  .kpi span { color: var(--text-2); font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+  .kpi.open b { color: var(--accent); } .kpi.emerg b { color: var(--danger); } .kpi.done b { color: var(--ok); }
+  .header-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); font: 600 15px var(--font); white-space: nowrap; }
+  .pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-2); }
+  .pill.live { color: var(--text); border-color: var(--danger); }
+  .pill.live .dot { background: var(--danger); animation: pulse 1.2s infinite; }
+  button.pill { cursor: pointer; transition: background-color 200ms ease, border-color 200ms ease; }
+  button.pill:hover { background: #1d2633; }
+  button.pill.armed { color: var(--ok); border-color: var(--ok); }
+  button.pill.needs { color: var(--accent); border-color: var(--accent); }
+  .pill.offline { color: var(--danger); border-color: var(--danger); }
 
-  main { display: grid; grid-template-columns: 1.35fr 1.3fr 1fr; gap: 18px; padding: 18px 28px; flex: 1; min-height: 0; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-    display: flex; flex-direction: column; min-height: 0; }
-  section h2 { margin: 0; padding: 14px 18px; font-size: 18px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--muted); border-bottom: 1px solid var(--line); }
-  .list { overflow-y: auto; padding: 8px 12px 12px; flex: 1; }
-  .empty { color: var(--muted); padding: 18px 6px; font-size: 18px; }
-  .row { border-radius: 10px; padding: 12px 14px; margin-top: 8px; background: #1a212c; transition: background-color 0.6s; }
-  .row.new { background: var(--flash); }
+  /* ---------- emergency banner ---------- */
+  #banner { display: none; align-items: center; gap: 20px; margin: 16px 28px 0; padding: 18px 24px;
+    border-radius: var(--radius); background: var(--danger); color: #fff; animation: alarm 1s steps(1) infinite; }
+  #banner.show { display: flex; }
+  #banner svg { width: 44px; height: 44px; }
+  #banner .big { font: 700 34px/1.1 var(--font-display); letter-spacing: 0.5px; }
+  #banner .small { font-size: 18px; opacity: 0.95; }
+  #banner button { margin-left: auto; min-height: 48px; padding: 0 22px; border-radius: 10px; border: 2px solid #fff;
+    background: transparent; color: #fff; font: 700 18px var(--font); cursor: pointer; }
+  #banner button:hover { background: rgba(255, 255, 255, 0.15); }
+  @keyframes alarm { 50% { background: var(--danger-deep); } }
+  @keyframes pulse { 50% { opacity: 0.35; } }
 
-  .line { padding: 10px 12px; margin-top: 8px; border-radius: 10px; font-size: 25px; line-height: 1.35; }
-  #transcript-panel h2 { color: var(--text); }
-  #transcript-panel h2 small { color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 15px; margin-left: 8px; }
-  .line .who { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: block; }
-  .line.user { background: #1d2635; } .line.user .who { color: var(--info); }
-  .line.assistant { background: #18241f; } .line.assistant .who { color: var(--ok); }
-  .line.new { background: var(--flash); }
+  /* ---------- layout ---------- */
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.25fr 1.5fr 0.9fr; gap: 20px; padding: 20px 28px 24px; }
+  section { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); }
+  section > h2 { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 20px; border-bottom: 1px solid var(--border);
+    font: 700 22px/1.2 var(--font-display); letter-spacing: 1px; text-transform: uppercase; }
+  section > h2 small { margin-left: auto; color: var(--text-2); font: 500 15px var(--font); letter-spacing: 0; text-transform: none; }
+  section > h2 svg { color: var(--accent); }
+  .list { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 16px; }
+  .empty { display: flex; align-items: center; gap: 10px; padding: 24px 8px; color: var(--text-2); }
 
-  .hazard { border-left: 8px solid var(--medium); }
-  .hazard.high { border-left-color: var(--high); }
-  .hazard.low { border-left-color: var(--low); }
-  .hazard.emergency { border-left-color: var(--high); background: #3a1416; }
-  .top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .sev { font-weight: 800; font-size: 16px; padding: 3px 10px; border-radius: 6px; color: #111; background: var(--medium); }
-  .sev.high { background: var(--high); color: #fff; } .sev.low { background: var(--low); }
-  .zone { font-weight: 700; font-size: 22px; }
-  .time { margin-left: auto; color: var(--muted); font-size: 16px; }
-  .type { font-size: 26px; font-weight: 700; margin: 6px 0 4px; }
-  .orig { font-size: 22px; } .en { color: #c6d0dd; font-size: 20px; margin-top: 2px; }
-  .tag { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 4px;
-    padding: 1px 6px; margin-right: 8px; vertical-align: middle; }
-  .by { color: var(--muted); font-size: 16px; margin-top: 6px; }
+  /* ---------- live call ---------- */
+  .line { margin: 0 0 12px; max-width: 92%; padding: 12px 16px; border-radius: 14px; font-size: 24px; line-height: 1.4; }
+  .line .who { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font: 600 13px var(--font);
+    letter-spacing: 1.2px; text-transform: uppercase; }
+  .line.user { background: var(--surface-2); border: 1px solid var(--border); }
+  .line.user .who { color: var(--text-2); }
+  .line.assistant { margin-left: auto; background: rgba(249, 115, 22, 0.12); border: 1px solid rgba(249, 115, 22, 0.45); }
+  .line.assistant .who { color: var(--accent); }
 
-  .alert { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; }
-  .alert .icon { font-size: 26px; grid-row: span 2; }
-  .alert .name { font-weight: 700; font-size: 21px; }
-  .alert .lang { color: var(--muted); font-size: 15px; font-weight: 400; }
-  .alert .what { grid-column: 2 / 4; color: #c6d0dd; font-size: 17px; }
-  .chip { font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px;
-    border-radius: 999px; background: #2a3342; color: var(--muted); }
-  .chip.calling { background: var(--info); color: #051220; animation: pulse 1.2s infinite; }
-  .chip.delivered { background: var(--ok); color: #04170c; }
-  .chip.failed { background: var(--high); color: #fff; }
-  @keyframes pulse { 50% { opacity: 0.55; } }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } section { max-height: 70vh; } }
+  /* ---------- hazards ---------- */
+  .hazard { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin-bottom: 12px;
+    padding: 14px 16px 14px 22px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border);
+    transition: opacity 250ms ease, background-color 600ms ease; }
+  .hazard::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; border-radius: 12px 0 0 12px; background: var(--warn); }
+  .hazard.high::before { background: var(--danger); }
+  .hazard.low::before { background: #eab308; }
+  .hazard.emergency { background: #2a0d0f; border-color: var(--danger); }
+  .hazard.emergency::before { background: var(--danger); }
+  .hazard.new { background: rgba(249, 115, 22, 0.22); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--text-2); font-size: 16px; }
+  .sev { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; font: 700 15px var(--font);
+    letter-spacing: 0.8px; color: #111; background: var(--warn); }
+  .sev.high, .sev.emergency { background: var(--danger); color: #fff; }
+  .sev.low { background: #eab308; }
+  .zone { color: var(--text); font-weight: 600; }
+  .time { margin-left: auto; font: 500 15px var(--font-mono); font-variant-numeric: tabular-nums; }
+  .title { grid-column: 1; margin: 2px 0 0; font: 700 28px/1.2 var(--font-display); letter-spacing: 0.3px; }
+  .quote { grid-column: 1; margin: 2px 0 0; color: var(--text); font-size: 19px; }
+  .quote .lang { display: inline-block; margin-right: 8px; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-2); font: 600 12px var(--font); vertical-align: 0.15em; }
+  .foot { grid-column: 1; display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; color: var(--text-2); font-size: 15px; }
+  .foot .notified { color: var(--ok); } .foot .not-sent { color: var(--warn); }
+  .resolve { grid-column: 2; grid-row: 1 / span 4; align-self: center; display: flex; flex-direction: column; align-items: center;
+    gap: 6px; min-width: 96px; padding: 10px 8px; border-radius: 12px; border: 2px solid var(--border); background: transparent;
+    color: var(--text-2); font: 600 14px var(--font); cursor: pointer; transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease; }
+  .resolve:hover { border-color: var(--ok); color: var(--text); }
+  .resolve .box { width: 44px; height: 44px; border-radius: 10px; border: 3px solid currentColor; display: grid; place-items: center; }
+  .resolve .box svg { width: 30px; height: 30px; stroke-width: 3; opacity: 0; transition: opacity 150ms ease; }
+  .resolve[aria-checked="true"] { border-color: var(--ok); background: rgba(34, 197, 94, 0.12); color: var(--ok); }
+  .resolve[aria-checked="true"] .box { background: var(--ok); border-color: var(--ok); color: var(--ok-ink); }
+  .resolve[aria-checked="true"] .box svg { opacity: 1; }
+  .resolve:disabled { opacity: 0.5; cursor: progress; }
+  .hazard.resolved { opacity: 0.55; }
+  .hazard.resolved .title { text-decoration: line-through; text-decoration-thickness: 2px; }
+  .hazard.resolved::before { background: var(--ok); }
+  .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; color: var(--text-2); font: 600 14px var(--font);
+    letter-spacing: 1.2px; text-transform: uppercase; }
+  .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+  /* ---------- zones ---------- */
+  .zone-card { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 16px; border-radius: 12px;
+    background: var(--surface-2); border: 2px solid var(--border); transition: border-color 300ms ease, background-color 300ms ease; }
+  .zone-card .zid { font: 700 40px/1 var(--font-display); }
+  .zone-card .zname { color: var(--text-2); font-size: 16px; }
+  .zone-status { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 12px; border-radius: 8px;
+    font: 700 17px var(--font); letter-spacing: 0.6px; }
+  .zone-card.clear .zone-status { background: rgba(34, 197, 94, 0.15); color: var(--ok); }
+  .zone-card.open { border-color: var(--accent); }
+  .zone-card.open .zone-status { background: var(--accent); color: var(--accent-ink); }
+  .zone-card.emergency { border-color: var(--danger); background: #2a0d0f; }
+  .zone-card.emergency .zone-status { background: var(--danger); color: #fff; animation: pulse 1.2s infinite; }
+
+  @media (max-width: 1200px) {
+    header { flex-wrap: wrap; } .kpis { margin-left: 0; }
+    main { grid-template-columns: 1fr; } section { max-height: 75vh; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Lucide icons (ISC) -->
+  <symbol id="i-hardhat" viewBox="0 0 24 24"><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M14 6a6 6 0 0 1 6 6v3"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><rect x="2" y="15" width="20" height="4" rx="1"/></symbol>
+  <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-siren" viewBox="0 0 24 24"><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="m19 10-4 4"/><path d="m15 10 4 4"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.7"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+</svg>
+
 <header>
-  <h1>Safe<span>Line</span></h1>
-  <p>Workers never see this screen. This is the safety manager's view.</p>
-  <span id="sound" class="pill off">🔈 Click to enable alarm sound</span>
-  <span id="live" class="pill">live</span>
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-hardhat"/></svg></div>
+    <div>
+      <h1>SafeLine</h1>
+      <p>Safety manager view &middot; workers never see this screen &mdash; they only talk</p>
+    </div>
+  </div>
+  <div class="kpis" aria-label="Site summary">
+    <div class="kpi open"><b id="k-open">0</b><span>Open hazards</span></div>
+    <div class="kpi emerg"><b id="k-emerg">0</b><span>Emergencies</span></div>
+    <div class="kpi done"><b id="k-done">0</b><span>Resolved</span></div>
+  </div>
+  <div class="header-actions">
+    <span id="call" class="pill" role="status" aria-live="polite"><span class="dot"></span><span>No active call</span></span>
+    <button id="sound" class="pill needs" type="button"><svg class="icon"><use href="#i-volume"/></svg><span>Enable alarm sound</span></button>
+  </div>
 </header>
-<div id="banner" title="Click to acknowledge"><div class="big"></div><div class="small"></div></div>
+
+<div id="banner" role="alert">
+  <svg class="icon" aria-hidden="true"><use href="#i-siren"/></svg>
+  <div><div class="big"></div><div class="small"></div></div>
+  <button type="button" id="ack">Acknowledge</button>
+</div>
+
 <main>
-  <section id="transcript-panel"><h2>🎧 Live call <small>what the worker says and hears — no screen on their side</small></h2><div class="list" id="transcript"></div></section>
-  <section><h2>Hazard feed</h2><div class="list" id="hazards"></div></section>
-  <section><h2>Alerts</h2><div class="list" id="alerts"></div></section>
+  <section aria-labelledby="h-call">
+    <h2 id="h-call"><svg class="icon" aria-hidden="true"><use href="#i-headset"/></svg>Live call<small>what the worker says and hears</small></h2>
+    <div class="list" id="transcript"></div>
+  </section>
+  <section aria-labelledby="h-haz">
+    <h2 id="h-haz"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>Hazard feed<small id="haz-count"></small></h2>
+    <div class="list" id="hazards"></div>
+  </section>
+  <section aria-labelledby="h-zones">
+    <h2 id="h-zones"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg>Site zones</h2>
+    <div class="list" id="zones"></div>
+  </section>
 </main>
+
 <script>
 const LANG = { zh: "中文", en: "EN", es: "ES" };
-const seen = { hazards: new Set(), alerts: new Map(), lines: new Set() };
+const icon = (id) => `<svg class="icon" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hm = (iso) => (iso || "").slice(11, 16);
+const seen = { hazards: new Set(), lines: new Set() };
 const acked = new Set();
-let firstLoad = true, audio = null;
+const pending = new Set();
+let firstLoad = true, audio = null, last = { transcript: "", hazards: "", zones: "" }, state = null;
 
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const hms = (iso) => (iso || "").slice(11, 19);
-
-// Browsers only allow sound after a user gesture, so arm it on the first click.
-document.addEventListener("click", () => {
+/* ---------- sound (browsers allow audio only after a click) ---------- */
+function armSound() {
   if (audio) return;
   audio = new (window.AudioContext || window.webkitAudioContext)();
-  const s = document.getElementById("sound");
-  s.textContent = "🔊 Alarm sound on"; s.classList.remove("off");
-});
-
-function siren() {
+  const b = document.getElementById("sound");
+  b.classList.replace("needs", "armed");
+  b.querySelector("span").textContent = "Alarm sound on";
+}
+document.addEventListener("click", armSound);
+function tone(freqs, step, gain) {
   if (!audio) return;
   const t0 = audio.currentTime;
-  for (let i = 0; i < 6; i++) {
+  freqs.forEach((f, i) => {
     const o = audio.createOscillator(), g = audio.createGain();
-    o.type = "square"; o.frequency.value = i % 2 ? 660 : 880;
-    g.gain.setValueAtTime(0.12, t0 + i * 0.35); g.gain.setValueAtTime(0, t0 + i * 0.35 + 0.3);
-    o.connect(g).connect(audio.destination); o.start(t0 + i * 0.35); o.stop(t0 + i * 0.35 + 0.32);
-  }
+    o.type = "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(gain, t0 + i * step); g.gain.setValueAtTime(0, t0 + i * step + step * 0.85);
+    o.connect(g).connect(audio.destination); o.start(t0 + i * step); o.stop(t0 + i * step + step);
+  });
 }
+const chime = () => tone([660, 990], 0.18, 0.08);
+const siren = () => tone([880, 660, 880, 660, 880, 660], 0.35, 0.12);
 
 function flash(el) {
   if (firstLoad) return;
@@ -127,90 +252,143 @@ function flash(el) {
   setTimeout(() => el.classList.remove("new"), 3000);
 }
 
-function renderBanner(hazards) {
-  const b = document.getElementById("banner");
-  const e = hazards.find((h) => h.is_emergency && !acked.has(h.id));
-  if (!e) { b.classList.remove("show"); return; }
-  b.querySelector(".big").textContent = `🚨 EMERGENCY — ${e.zone_name}`;
-  b.querySelector(".small").textContent =
-    `${e.description_en} · reported by ${e.caller_name} at ${hms(e.created_at)} · click to acknowledge`;
-  b.onclick = () => { acked.add(e.id); b.classList.remove("show"); };
-  b.classList.add("show");
+/* ---------- resolve checkbox ---------- */
+async function toggleResolved(id, resolved) {
+  pending.add(id);
+  const h = state.hazards.find((x) => x.id === id);
+  if (h) h.resolved_at = resolved ? new Date().toISOString().slice(0, 19) : null;   // optimistic
+  last.hazards = ""; render(state);
+  try {
+    const r = await fetch(`/api/hazards/${id}/resolve`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resolved }),
+    });
+    if (!r.ok) throw new Error(r.status);
+  } catch (e) {
+    alert("Could not save. Check the server and try again.");
+  } finally {
+    pending.delete(id);
+    poll();
+  }
+}
+document.getElementById("hazards").addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".resolve");
+  if (btn && !btn.disabled) toggleResolved(Number(btn.dataset.id), btn.getAttribute("aria-checked") !== "true");
+});
+
+/* ---------- rendering ---------- */
+function renderCall(live) {
+  const el = document.getElementById("call");
+  const active = live && live.status && live.status !== "ended";
+  el.className = "pill" + (active ? " live" : "");
+  el.querySelector("span:last-child").textContent = active ? `Live call · ${live.caller}` : "No active call";
 }
 
 function renderTranscript(lines) {
+  const key = JSON.stringify(lines);
+  if (key === last.transcript) return;
+  last.transcript = key;
   const box = document.getElementById("transcript");
-  if (!lines.length) { box.innerHTML = '<div class="empty">Waiting for a worker to call SafeLine…</div>'; return; }
-  box.innerHTML = "";
-  for (const l of lines) {
-    const el = document.createElement("div");
-    el.className = "line " + (l.role === "assistant" ? "assistant" : "user");
-    el.innerHTML = `<span class="who">${l.role === "assistant" ? "SafeLine" : "Worker"}</span>${esc(l.text)}`;
-    box.appendChild(el);
-    if (!seen.lines.has(l.id)) { seen.lines.add(l.id); flash(el); }
-  }
+  if (!lines.length) { box.innerHTML = `<div class="empty">${icon("headset")} Waiting for a worker to call Safe Line…</div>`; return; }
+  box.innerHTML = lines.map((l) => `
+    <p class="line ${l.role === "assistant" ? "assistant" : "user"}" data-id="${l.id}">
+      <span class="who">${l.role === "assistant" ? icon("hardhat") + "Safe Line" : icon("user") + "Worker"}</span>${esc(l.text)}
+    </p>`).join("");
+  box.querySelectorAll(".line").forEach((el) => {
+    if (!seen.lines.has(el.dataset.id)) { seen.lines.add(el.dataset.id); flash(el); }
+  });
   box.scrollTop = box.scrollHeight;
 }
 
-function renderHazards(rows) {
-  const box = document.getElementById("hazards");
-  if (!rows.length) { box.innerHTML = '<div class="empty">No hazards reported yet.</div>'; return; }
-  box.innerHTML = "";
-  for (const h of rows) {
-    const sev = (h.severity || "medium").toLowerCase();
-    const el = document.createElement("div");
-    el.className = `row hazard ${sev}` + (h.is_emergency ? " emergency" : "");
-    el.innerHTML = `
-      <div class="top">
-        <span class="sev ${esc(sev)}">${h.is_emergency ? "🚨 EMERGENCY" : esc(sev.toUpperCase())}</span>
-        <span class="zone">${esc(h.zone_name)}</span>
-        <span class="time">${hms(h.created_at)}</span>
-      </div>
-      <div class="type">${esc(h.is_emergency ? h.description_en : h.hazard_type)}</div>
-      <div class="orig"><span class="tag">${esc(LANG[h.language] || h.language)}</span>${esc(h.description_original)}</div>
-      ${h.language !== "en" && !h.is_emergency ? `<div class="en"><span class="tag">EN</span>${esc(h.description_en)}</div>` : ""}
-      <div class="by">Reported by ${esc(h.caller_name)}</div>`;
-    box.appendChild(el);
-    if (!seen.hazards.has(h.id)) {
-      seen.hazards.add(h.id); flash(el);
-      if (h.is_emergency && !firstLoad) siren();
-    }
-  }
+function hazardCard(h) {
+  const sev = (h.severity || "medium").toLowerCase();
+  const resolved = !!h.resolved_at;
+  const label = h.is_emergency ? "EMERGENCY" : sev.toUpperCase();
+  const sevIcon = h.is_emergency ? "siren" : "alert";
+  const notified = h.notified === "delivered" ? `<span class="notified">${icon("bell")} Manager notified</span>`
+                 : h.notified === "failed" ? `<span class="not-sent">${icon("bell")} Discord not sent</span>` : "";
+  return `
+  <article class="hazard ${esc(sev)}${h.is_emergency ? " emergency" : ""}${resolved ? " resolved" : ""}" data-id="${h.id}">
+    <div class="meta">
+      <span class="sev ${h.is_emergency ? "emergency" : esc(sev)}">${icon(sevIcon)}${label}</span>
+      <span class="zone">${esc(h.zone_name)}</span>
+      <span class="time">${hm(h.created_at)}</span>
+    </div>
+    <h3 class="title">${esc(h.is_emergency ? h.description_en : h.hazard_type)}</h3>
+    <p class="quote"><span class="lang">${esc(LANG[h.language] || h.language)}</span>“${esc(h.description_original)}”</p>
+    ${h.language !== "en" && !h.is_emergency ? `<p class="quote"><span class="lang">EN</span>${esc(h.description_en)}</p>` : ""}
+    <div class="foot"><span>${icon("user")} ${esc(h.caller_name)}</span>${notified}
+      ${resolved ? `<span class="notified">${icon("check")} Resolved ${hm(h.resolved_at)}</span>` : ""}</div>
+    <button type="button" class="resolve" role="checkbox" aria-checked="${resolved}" data-id="${h.id}"
+            aria-label="Mark ${esc(h.hazard_type)} in ${esc(h.zone_name)} as resolved" ${pending.has(h.id) ? "disabled" : ""}>
+      <span class="box">${icon("check")}</span>${resolved ? "Resolved" : "Mark resolved"}
+    </button>
+  </article>`;
 }
 
-function renderAlerts(rows) {
-  const box = document.getElementById("alerts");
-  if (!rows.length) { box.innerHTML = '<div class="empty">No alerts sent yet.</div>'; return; }
-  box.innerHTML = "";
-  for (const a of rows) {
-    const el = document.createElement("div");
-    el.className = "row alert";
-    const discord = a.channel === "discord";
-    const icon = discord ? "💬" : (a.is_emergency ? "🚨" : "📞");
-    const what = discord ? `Discord · ${a.is_emergency ? "URGENT @here" : a.hazard_type}`
-                         : (a.message || `${a.hazard_type} · ${a.zone_name}`);
-    el.innerHTML = `
-      <span class="icon">${icon}</span>
-      <span class="name">${esc(a.recipient_name)} ${discord ? "" : `<span class="lang">${esc(LANG[a.language] || a.language)}</span>`}</span>
-      <span class="chip ${esc(a.status)}">${esc(a.status)}</span>
-      <span class="what">${esc(what)}</span>`;
-    box.appendChild(el);
-    if (seen.alerts.get(a.id) !== a.status) { seen.alerts.set(a.id, a.status); flash(el); }
-  }
+function renderHazards(rows) {
+  const key = JSON.stringify(rows) + [...pending].join();
+  if (key === last.hazards) return;
+  last.hazards = key;
+  const box = document.getElementById("hazards");
+  const open = rows.filter((h) => !h.resolved_at), done = rows.filter((h) => h.resolved_at);
+  document.getElementById("haz-count").textContent = `${open.length} open · ${done.length} resolved`;
+  if (!rows.length) { box.innerHTML = `<div class="empty">${icon("check")} No hazards reported. All clear.</div>`; return; }
+  box.innerHTML = (open.length ? open.map(hazardCard).join("") : `<div class="empty">${icon("check")} Every reported hazard is resolved.</div>`)
+    + (done.length ? `<div class="divider">Resolved</div>` + done.map(hazardCard).join("") : "");
+  box.querySelectorAll(".hazard").forEach((el) => {
+    const id = Number(el.dataset.id);
+    if (!seen.hazards.has(id)) {
+      seen.hazards.add(id); flash(el);
+      if (!firstLoad) (el.classList.contains("emergency") ? siren : chime)();
+    }
+  });
+}
+
+function renderZones(zones) {
+  const key = JSON.stringify(zones);
+  if (key === last.zones) return;
+  last.zones = key;
+  document.getElementById("zones").innerHTML = zones.map((z) => {
+    const cls = z.emergency ? "emergency" : z.open ? "open" : "clear";
+    const status = z.emergency ? `${icon("siren")} EMERGENCY` : z.open ? `${icon("alert")} ${z.open} OPEN` : `${icon("check")} CLEAR`;
+    return `<div class="zone-card ${cls}"><div class="zid">Zone ${esc(z.id)}</div>
+      <div class="zname">${esc(z.name.replace(/^Zone \w+ - /, ""))}</div><span class="zone-status">${status}</span></div>`;
+  }).join("");
+}
+
+function renderBanner(hazards) {
+  const b = document.getElementById("banner");
+  const e = hazards.find((h) => h.is_emergency && !h.resolved_at && !acked.has(h.id));
+  if (!e) { b.classList.remove("show"); return; }
+  b.querySelector(".big").textContent = `EMERGENCY — ${e.zone_name}`;
+  b.querySelector(".small").textContent = `${e.description_en} · reported by ${e.caller_name} at ${hm(e.created_at)}`;
+  document.getElementById("ack").onclick = () => { acked.add(e.id); b.classList.remove("show"); };
+  b.classList.add("show");
+}
+
+function render(s) {
+  renderCall(s.live_call);
+  renderTranscript(s.transcript);
+  renderHazards(s.hazards);
+  renderZones(s.zones);
+  renderBanner(s.hazards);
+  const open = s.hazards.filter((h) => !h.resolved_at);
+  document.getElementById("k-open").textContent = open.length;
+  document.getElementById("k-emerg").textContent = open.filter((h) => h.is_emergency).length;
+  document.getElementById("k-done").textContent = s.hazards.length - open.length;
 }
 
 async function poll() {
   try {
     const s = await (await fetch("/api/state", { cache: "no-store" })).json();
-    renderTranscript(s.transcript);
-    renderHazards(s.hazards);
-    renderAlerts(s.alerts);
     if (firstLoad) s.hazards.forEach((h) => h.is_emergency && acked.add(h.id));
-    renderBanner(s.hazards);
+    state = s;
+    render(s);
     firstLoad = false;
-    document.getElementById("live").className = "pill";
+    document.getElementById("call").classList.remove("offline");
   } catch (e) {
-    document.getElementById("live").className = "pill down";
+    const c = document.getElementById("call");
+    c.className = "pill offline"; c.querySelector("span:last-child").textContent = "Server offline";
   }
 }
 poll();

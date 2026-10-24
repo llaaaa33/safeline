@@ -27,7 +27,7 @@ SCENARIOS = {
             "description_original": "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.",
             "description_en": "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.",
         },
-        "after": ("assistant", "Got it. Warning one coworker in Zone B now."),
+        "after": ("assistant", "Got it. The safety manager has been alerted."),
     },
     "emergency": {
         "lines": [("assistant", "Safe Line. What's the hazard, and where?"),
@@ -50,7 +50,7 @@ SCENARIOS = {
             "description_original": "B区三楼脚手架有一块木板松了，很危险。",
             "description_en": "A plank on the level 3 scaffold in Zone B is loose. It is very dangerous.",
         },
-        "after": ("assistant", "收到，已记录。正在通知B区的同事。"),
+        "after": ("assistant", "收到，已通知安全经理。"),
     },
     "emergency-zh": {
         "lines": [("assistant", "这里是 SafeLine，请说哪里有什么隐患。"), ("user", "救命，A区有人从梯子上摔下来了")],

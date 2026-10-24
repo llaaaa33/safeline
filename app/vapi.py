@@ -1,18 +1,10 @@
-"""Vapi assistant configs (inbound reporter, outbound alert caller) and the outbound call helper.
+"""Per-caller Vapi assistant config for inbound hazard reports.
 
 Field names checked against docs.vapi.ai: assistant-request response {"assistant": {...}},
 function tools with "server": {"url"}, built-in {"type": "endCall"}, deepgram nova-3 (en/es/zh),
-azure voices, POST /call with phoneNumberId + customer.number + transient assistant.
+azure voices.
 """
-import logging
-import os
-
-import httpx
-
-log = logging.getLogger("safeline.vapi")
-
-VAPI_API = "https://api.vapi.ai"
-LLM = {"provider": "openai", "model": "gpt-4.1", "temperature": 0.2}
+LLM ={"provider": "openai", "model": "gpt-4.1", "temperature": 0.2}
 
 LANGUAGES = {
     "en": {"name": "English", "voice": {"provider": "azure", "voiceId": "andrew"},
@@ -39,17 +31,8 @@ Always fill description_original with the caller's own words and description_en 
 If the caller mentions an injury, a fall, fire, or says emergency / help, immediately call report_emergency,
 then say help is on the way and tell them to stay where they are if it is safe.
 
-After the tool returns, confirm in one sentence, including how many coworkers are being warned, then end the call.
+After the tool returns, confirm in one sentence that the safety manager has been alerted, then end the call.
 Never ask the caller to look at a screen or open an app.
-When you say the product name out loud, write it as "Safe Line" (two words)."""
-
-ALERT_PROMPT = """You are SafeLine, calling a construction worker with a safety alert.
-Speak only {language_name}. Keep every turn under 15 words.
-You have already said: "{message}"
-Facts: zone = {zone_name}; hazard = {hazard_type}; report = {description_en}.
-Answer brief questions about this one hazard only. For anything else, say you can only talk about this alert.
-When the worker acknowledges, says thanks, or has no questions, call endCall.
-Never ask the worker to look at a screen or open an app.
 When you say the product name out loud, write it as "Safe Line" (two words)."""
 
 
@@ -78,7 +61,7 @@ def _report_tools(zone_ids: list[str], webhook_url: str) -> list[dict]:
             "server": server,
             "function": {
                 "name": "report_hazard",
-                "description": "Log a construction-site hazard and phone the coworkers in that zone.",
+                "description": "Log a construction-site hazard and alert the safety manager.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -133,40 +116,3 @@ def build_inbound_assistant(worker: dict, zones: list[dict], webhook_url: str) -
         # conversation-update carries the whole conversation after every turn (drives the live transcript)
         "serverMessages": ["tool-calls", "conversation-update", "status-update", "end-of-call-report"],
     }
-
-
-def build_alert_assistant(*, message: str, language: str, zone_name: str, hazard_type: str,
-                          description_en: str, webhook_url: str) -> dict:
-    cfg = lang_cfg(language)
-    prompt = ALERT_PROMPT.format(language_name=cfg["name"], message=message, zone_name=zone_name,
-                                 hazard_type=hazard_type, description_en=description_en)
-    return {
-        "name": "SafeLine Alert",
-        "firstMessage": message,
-        "transcriber": _transcriber(language),
-        "voice": cfg["voice"],
-        "model": {**LLM, "messages": [{"role": "system", "content": prompt}], "tools": [{"type": "endCall"}]},
-        "endCallMessage": cfg["goodbye"],
-        "maxDurationSeconds": 60,
-        "server": {"url": webhook_url},
-        "serverMessages": ["status-update", "end-of-call-report"],
-    }
-
-
-async def create_outbound_call(phone: str, assistant: dict) -> tuple[str | None, str | None]:
-    """Place a call. Returns (vapi_call_id, None) or (None, error)."""
-    key = os.getenv("VAPI_API_KEY", "").strip()
-    number_id = os.getenv("VAPI_PHONE_NUMBER_ID", "").strip()
-    if not key or not number_id:
-        return None, "VAPI_API_KEY / VAPI_PHONE_NUMBER_ID not set"
-    if not phone or "X" in phone:
-        return None, f"invalid phone number {phone!r}"
-    body = {"phoneNumberId": number_id, "customer": {"number": phone}, "assistant": assistant}
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.post(f"{VAPI_API}/call", json=body, headers={"Authorization": f"Bearer {key}"})
-    except httpx.HTTPError as e:
-        return None, f"Vapi request failed: {e}"
-    if r.status_code >= 300:
-        return None, f"Vapi {r.status_code}: {r.text[:300]}"
-    return r.json().get("id"), None

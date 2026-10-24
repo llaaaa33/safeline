@@ -1,4 +1,4 @@
-"""SafeLine backend: Vapi webhook, dashboard state, dashboard page.
+"""SafeLine backend: Vapi webhook, dashboard state, resolve endpoint, dashboard page.
 
 Run: uvicorn app.main:app --port 8000
 """
@@ -8,10 +8,11 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
-from app import db, llm, notify, vapi
+from app import db, notify, vapi
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -21,6 +22,7 @@ SEED: dict = {}
 SEVERITIES = {"low", "medium", "high"}
 _seen_tool_calls: set[str] = set()
 _public_base = ""
+_live_call: dict = {}  # most recent inbound call: id, caller, status
 
 
 @asynccontextmanager
@@ -53,7 +55,7 @@ def caller_for(number: str | None) -> dict:
 
 def zone_name(zone_id: str | None) -> str:
     z = next((z for z in SEED["zones"] if z["id"] == zone_id), None)
-    return z["name"] if z else "an unknown zone"
+    return z["name"] if z else "Unknown zone"
 
 
 def webhook_url(request: Request | None = None) -> str:
@@ -67,48 +69,16 @@ def webhook_url(request: Request | None = None) -> str:
     return base.rstrip("/") + "/vapi/webhook"
 
 
-# ---------- background work (after the tool result is sent) ----------
+# ---------- manager alert (after the tool result is sent) ----------
 
-async def _call(alert_id: int, phone: str, assistant: dict, who: str) -> None:
-    call_id, err = await vapi.create_outbound_call(phone, assistant)
-    if call_id:
-        db.update_alert(alert_id, status="calling", vapi_call_id=call_id)
+async def alert_manager(hazard_id: int, discord_alert_id: int) -> None:
+    hazard = db.get_hazard(hazard_id)
+    zname = zone_name(hazard["zone_id"])
+    if hazard["is_emergency"]:
+        ok = await notify.send_discord(notify.format_emergency(hazard, zname), urgent=True)
     else:
-        log.error("Alert call to %s failed: %s", who, err)
-        db.update_alert(alert_id, status="failed")
-
-
-async def dispatch_hazard(hazard_id: int, recipients: list[tuple[int, dict]], discord_alert_id: int, base_url: str):
-    hazard = db.get_hazard(hazard_id)
-    zname = zone_name(hazard["zone_id"])
-    ok = await notify.send_discord(notify.format_hazard(hazard, zname, [w["name"] for _, w in recipients]))
+        ok = await notify.send_discord(notify.format_hazard(hazard, zname))
     db.update_alert(discord_alert_id, status="delivered" if ok else "failed")
-
-    for alert_id, worker in recipients:
-        message = await llm.translate_alert(zname, hazard["hazard_type"], hazard["description_en"], worker["language"])
-        db.update_alert(alert_id, message=message)
-        assistant = vapi.build_alert_assistant(
-            message=message, language=worker["language"], zone_name=zname, hazard_type=hazard["hazard_type"],
-            description_en=hazard["description_en"], webhook_url=base_url,
-        )
-        await _call(alert_id, worker["phone"], assistant, worker["name"])
-
-
-async def dispatch_emergency(hazard_id: int, call_alert_id: int | None, discord_alert_id: int, base_url: str):
-    hazard = db.get_hazard(hazard_id)
-    zname = zone_name(hazard["zone_id"])
-    supervisor = os.getenv("SUPERVISOR_PHONE", "").strip()
-    ok = await notify.send_discord(notify.format_emergency(hazard, zname, supervisor), urgent=True)
-    db.update_alert(discord_alert_id, status="delivered" if ok else "failed")
-
-    if call_alert_id is not None:
-        message = f"Emergency reported in {zname}: {hazard['description_en']}"
-        db.update_alert(call_alert_id, message=message)
-        assistant = vapi.build_alert_assistant(
-            message=message, language="en", zone_name=zname, hazard_type="EMERGENCY",
-            description_en=hazard["description_en"], webhook_url=base_url,
-        )
-        await _call(call_alert_id, supervisor, assistant, "supervisor")
 
 
 # ---------- tool handlers (must return fast) ----------
@@ -123,7 +93,7 @@ def _args(tool_call: dict) -> dict:
     return args
 
 
-def handle_report_hazard(args: dict, call: dict, caller: dict, tasks: BackgroundTasks, base_url: str) -> dict:
+def handle_report_hazard(args: dict, call: dict, caller: dict, tasks: BackgroundTasks) -> dict:
     zone_ids = {z["id"] for z in SEED["zones"]}
     zone_id = str(args.get("zone_id", "")).strip().upper()
     if zone_id not in zone_ids:
@@ -136,16 +106,13 @@ def handle_report_hazard(args: dict, call: dict, caller: dict, tasks: Background
         description_original=str(args.get("description_original") or ""),
         description_en=str(args.get("description_en") or ""), language=caller["language"],
     )
-    workers = [w for w in SEED["workers"] if w["zone"] == zone_id and _digits(w["phone"]) != _digits(caller["phone"])]
-    recipients = [(db.insert_alert(hazard_id=hazard_id, recipient_name=w["name"], phone=w["phone"],
-                                   language=w["language"], channel="call"), w) for w in workers]
     discord_alert_id = db.insert_alert(hazard_id=hazard_id, recipient_name="Safety manager", phone="",
                                        language="en", channel="discord")
-    tasks.add_task(dispatch_hazard, hazard_id, recipients, discord_alert_id, base_url)
-    return {"ok": True, "coworkers_alerted": len(workers)}
+    tasks.add_task(alert_manager, hazard_id, discord_alert_id)
+    return {"ok": True, "safety_manager_alerted": True}
 
 
-def handle_report_emergency(args: dict, call: dict, caller: dict, tasks: BackgroundTasks, base_url: str) -> dict:
+def handle_report_emergency(args: dict, call: dict, caller: dict, tasks: BackgroundTasks) -> dict:
     zone_id = str(args.get("zone_id", "")).strip().upper()
     if zone_id not in {z["id"] for z in SEED["zones"]}:
         zone_id = "unknown"
@@ -157,33 +124,12 @@ def handle_report_emergency(args: dict, call: dict, caller: dict, tasks: Backgro
     )
     discord_alert_id = db.insert_alert(hazard_id=hazard_id, recipient_name="Safety manager (@here)", phone="",
                                        language="en", channel="discord")
-    supervisor = os.getenv("SUPERVISOR_PHONE", "").strip()
-    call_alert_id = None
-    if supervisor:
-        sup = find_worker(supervisor)
-        call_alert_id = db.insert_alert(hazard_id=hazard_id, phone=supervisor, language="en", channel="call",
-                                        recipient_name=f"Supervisor ({sup['name']})" if sup else "Supervisor")
-    tasks.add_task(dispatch_emergency, hazard_id, call_alert_id, discord_alert_id, base_url)
-    return {"ok": True, "manager_alerted": True,
+    tasks.add_task(alert_manager, hazard_id, discord_alert_id)
+    return {"ok": True, "safety_manager_alerted": True,
             "say_to_caller": "Help is on the way. Stay where you are if it is safe."}
 
 
 TOOL_HANDLERS = {"report_hazard": handle_report_hazard, "report_emergency": handle_report_emergency}
-
-
-# ---------- outbound alert call status ----------
-
-def handle_status(call: dict, status: str | None, ended_reason: str | None = None) -> None:
-    alert = db.get_alert_by_call(call.get("id", ""))
-    if not alert or alert["status"] == "delivered":
-        return
-    if status in ("queued", "ringing"):
-        db.update_alert(alert["id"], status="calling")
-    elif status == "in-progress":
-        db.update_alert(alert["id"], status="delivered")  # answered: the worker is hearing the alert
-    elif status == "ended":
-        log.info("Alert call %s ended before it was answered: %s", call.get("id"), ended_reason or call.get("endedReason"))
-        db.update_alert(alert["id"], status="failed")
 
 
 # ---------- routes ----------
@@ -196,12 +142,12 @@ async def vapi_webhook(request: Request, tasks: BackgroundTasks):
     call = msg.get("call") or {}
     number = (call.get("customer") or msg.get("customer") or {}).get("number")
     log.info("webhook %s: %s", mtype, json.dumps(body, ensure_ascii=False)[:400])
-    base_url = webhook_url(request)
 
     if mtype == "assistant-request":
         worker = caller_for(number)
         log.info("Inbound call from %s -> %s (%s)", number, worker["name"], worker["language"])
-        return {"assistant": vapi.build_inbound_assistant(worker, SEED["zones"], base_url)}
+        _live_call.update(id=call.get("id"), caller=worker["name"], status="ringing")
+        return {"assistant": vapi.build_inbound_assistant(worker, SEED["zones"], webhook_url(request))}
 
     if mtype == "tool-calls":
         caller = caller_for(number)
@@ -216,25 +162,23 @@ async def vapi_webhook(request: Request, tasks: BackgroundTasks):
                 out = {"ok": True, "note": "already recorded"}
             else:
                 _seen_tool_calls.add(tc_id)
-                out = handler(_args(tc), call, caller, tasks, base_url)
+                out = handler(_args(tc), call, caller, tasks)
             results.append({"name": name, "toolCallId": tc_id, "result": json.dumps(out, ensure_ascii=False)})
         return {"results": results}
 
     if mtype == "conversation-update":
         roles = {"user": "user", "bot": "assistant", "assistant": "assistant"}
-        lines = [(roles[m["role"]], (m.get("message") or m.get("content") or "").strip())
-                 for m in msg.get("messages") or [] if m.get("role") in roles]
         merged: list[tuple[str, str]] = []  # Vapi splits one turn into fragments; show one line per turn
-        for role, text in lines:
-            if not text:
+        for m in msg.get("messages") or []:
+            role, text = roles.get(m.get("role")), (m.get("message") or m.get("content") or "").strip()
+            if not role or not text:
                 continue
             if merged and merged[-1][0] == role:
                 merged[-1] = (role, f"{merged[-1][1]} {text}")
             else:
                 merged.append((role, text))
-        lines = merged
-        if lines:
-            db.replace_transcript(call.get("id", "unknown"), lines)
+        if merged:
+            db.replace_transcript(call.get("id", "unknown"), merged)
         return {}
 
     if mtype.startswith("transcript"):
@@ -243,18 +187,35 @@ async def vapi_webhook(request: Request, tasks: BackgroundTasks):
             db.add_transcript(call.get("id", "unknown"), msg.get("role", "user"), msg["transcript"])
         return {}
 
-    if mtype == "status-update":
-        handle_status(call, msg.get("status"))
-    elif mtype == "end-of-call-report":
-        handle_status(call, "ended", msg.get("endedReason"))
+    if mtype in ("status-update", "end-of-call-report") and call.get("id") == _live_call.get("id"):
+        _live_call["status"] = "ended" if mtype == "end-of-call-report" else msg.get("status")
     return {}
+
+
+class ResolveBody(BaseModel):
+    resolved: bool = True
+
+
+@app.post("/api/hazards/{hazard_id}/resolve")
+def resolve_hazard(hazard_id: int, body: ResolveBody):
+    if not db.get_hazard(hazard_id):
+        raise HTTPException(404, "hazard not found")
+    db.set_resolved(hazard_id, body.resolved)
+    return {"ok": True, "hazard": db.get_hazard(hazard_id)}
 
 
 @app.get("/api/state")
 def api_state():
     state = db.get_state()
-    for row in state["hazards"] + state["alerts"]:
-        row["zone_name"] = zone_name(row["zone_id"])
+    for h in state["hazards"]:
+        h["zone_name"] = zone_name(h["zone_id"])
+    open_by_zone = db.open_counts_by_zone()
+    state["zones"] = [
+        {"id": z["id"], "name": z["name"], "open": open_by_zone.get(z["id"], {}).get("open", 0),
+         "emergency": bool(open_by_zone.get(z["id"], {}).get("emergency"))}
+        for z in SEED["zones"]
+    ]
+    state["live_call"] = dict(_live_call)
     return state
 
 

@@ -30,28 +30,27 @@ async def send_discord(content: str, urgent: bool = False) -> bool:
     return True
 
 
-def format_hazard(hazard: dict, zone_name: str, recipients: list[str]) -> str:
+def format_hazard(hazard: dict, zone_name: str) -> str:
     sev = (hazard["severity"] or "medium").lower()
     lang = hazard["language"] or "en"
-    calling = ", ".join(recipients) if recipients else "nobody else is in this zone"
-    return (
-        f"{SEVERITY_ICON.get(sev, '⚠️')} **{sev.upper()} hazard** — {zone_name}\n"
-        f"**Hazard:** {hazard['hazard_type']}\n"
-        f"**Original ({LANGUAGE_TAG.get(lang, lang)}):** {hazard['description_original']}\n"
-        f"**English:** {hazard['description_en']}\n"
-        f"**Reported by:** {hazard['caller_name']} · {hazard['created_at'][11:19]}\n"
-        f"**Calling now:** {calling}"
-    )
+    lines = [
+        f"{SEVERITY_ICON.get(sev, '⚠️')} **{sev.upper()} hazard** — {zone_name}",
+        f"**Hazard:** {hazard['hazard_type']}",
+        f"**Reported ({LANGUAGE_TAG.get(lang, lang)}):** {hazard['description_original']}",
+    ]
+    if lang != "en":
+        lines.append(f"**English:** {hazard['description_en']}")
+    lines.append(f"**Reported by:** {hazard['caller_name']} · {hazard['created_at'][11:19]}")
+    return "\n".join(lines)
 
 
-def format_emergency(hazard: dict, zone_name: str, supervisor: str) -> str:
+def format_emergency(hazard: dict, zone_name: str) -> str:
     lang = hazard["language"] or "en"
     return (
         f"🚨 URGENT @here — **EMERGENCY in {zone_name}**\n"
         f"**What happened:** {hazard['description_en']}\n"
-        f"**Original ({LANGUAGE_TAG.get(lang, lang)}):** {hazard['description_original']}\n"
+        f"**Reported ({LANGUAGE_TAG.get(lang, lang)}):** {hazard['description_original']}\n"
         f"**Reported by:** {hazard['caller_name']} · {hazard['created_at'][11:19]}"
-        + (f"\n**Calling supervisor:** {supervisor}" if supervisor else "")
     )
 
 

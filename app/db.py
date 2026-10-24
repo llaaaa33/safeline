@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS hazards (
     description_original TEXT,
     description_en TEXT,
     language TEXT,
-    is_emergency INTEGER NOT NULL DEFAULT 0
+    is_emergency INTEGER NOT NULL DEFAULT 0,
+    resolved_at TEXT          -- set when the safety manager ticks "resolved"
 );
 CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     phone TEXT,
     language TEXT,
     message TEXT,
-    channel TEXT NOT NULL,   -- call | discord
+    channel TEXT NOT NULL,   -- discord
     status TEXT NOT NULL,    -- queued | calling | delivered | failed
     vapi_call_id TEXT,
     updated_at TEXT NOT NULL
@@ -68,6 +69,9 @@ def init_db(path: Path | None = None) -> None:
     _conn = sqlite3.connect(path or DB_PATH, check_same_thread=False)
     _conn.row_factory = sqlite3.Row
     _conn.executescript(SCHEMA)
+    columns = {r["name"] for r in _conn.execute("PRAGMA table_info(hazards)")}
+    if "resolved_at" not in columns:  # databases created before the resolve feature
+        _conn.execute("ALTER TABLE hazards ADD COLUMN resolved_at TEXT")
     _conn.commit()
 
 
@@ -106,20 +110,18 @@ def insert_alert(*, hazard_id, recipient_name, phone, language, channel, message
     )
 
 
-def update_alert(alert_id: int, *, status: str | None = None, message: str | None = None,
-                 vapi_call_id: str | None = None) -> None:
-    sets, params = ["updated_at = ?"], [now()]
-    for col, val in (("status", status), ("message", message), ("vapi_call_id", vapi_call_id)):
-        if val is not None:
-            sets.append(f"{col} = ?")
-            params.append(val)
-    params.append(alert_id)
-    _exec(f"UPDATE alerts SET {', '.join(sets)} WHERE id = ?", tuple(params))
+def update_alert(alert_id: int, *, status: str) -> None:
+    _exec("UPDATE alerts SET status = ?, updated_at = ? WHERE id = ?", (status, now(), alert_id))
 
 
-def get_alert_by_call(vapi_call_id: str) -> dict | None:
-    rows = _query("SELECT * FROM alerts WHERE vapi_call_id = ?", (vapi_call_id,))
-    return rows[0] if rows else None
+def set_resolved(hazard_id: int, resolved: bool) -> None:
+    _exec("UPDATE hazards SET resolved_at = ? WHERE id = ?", (now() if resolved else None, hazard_id))
+
+
+def open_counts_by_zone() -> dict[str, dict]:
+    rows = _query("SELECT zone_id, COUNT(*) AS open, MAX(is_emergency) AS emergency FROM hazards"
+                  " WHERE resolved_at IS NULL GROUP BY zone_id")
+    return {r["zone_id"]: r for r in rows}
 
 
 def add_transcript(call_id: str, role: str, text: str) -> None:
@@ -137,10 +139,10 @@ def replace_transcript(call_id: str, lines: list[tuple[str, str]]) -> None:
 
 
 def get_state() -> dict:
-    hazards = _query("SELECT * FROM hazards ORDER BY id DESC LIMIT 20")
-    alerts = _query(
-        "SELECT a.*, h.zone_id, h.hazard_type, h.is_emergency FROM alerts a"
-        " JOIN hazards h ON h.id = a.hazard_id ORDER BY a.id DESC LIMIT 20"
+    # open hazards first (newest on top), then resolved ones; `notified` = Discord delivery status
+    hazards = _query(
+        "SELECT h.*, (SELECT a.status FROM alerts a WHERE a.hazard_id = h.id ORDER BY a.id DESC LIMIT 1) AS notified"
+        " FROM hazards h ORDER BY (h.resolved_at IS NOT NULL), h.id DESC LIMIT 30"
     )
     latest = _query("SELECT call_id FROM transcripts ORDER BY id DESC LIMIT 1")
     transcript = []
@@ -149,4 +151,4 @@ def get_state() -> dict:
             "SELECT * FROM (SELECT * FROM transcripts WHERE call_id = ? ORDER BY id DESC LIMIT 30) ORDER BY id",
             (latest[0]["call_id"],),
         )
-    return {"hazards": hazards, "alerts": alerts, "transcript": transcript}
+    return {"hazards": hazards, "transcript": transcript}
