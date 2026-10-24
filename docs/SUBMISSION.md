@@ -3,6 +3,10 @@
 **Track:** No App
 **Video:** _(link)_ · **Code:** _(link)_
 
+## Form: 2 Sentence Description of the Project
+
+SafeLine is a no-interface safety line for construction workers: they report a hazard just by calling and talking in their own language — no app, no screen, hands stay on the job. Within seconds SafeLine logs it for the safety manager and phones every other worker in that zone with a spoken warning in their language, closing the loop entirely by voice.
+
 ## One line
 SafeLine is a safety network for construction sites that workers use without ever touching a screen: they report a hazard by talking, and every coworker in that zone is warned by a phone call that speaks to them in their own language.
 

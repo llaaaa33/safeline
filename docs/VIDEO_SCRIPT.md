@@ -1,4 +1,4 @@
-# 演示视频脚本（目标 90 秒，最长 2 分钟）
+# 演示视频脚本（表单要求公开链接，90 秒以内）
 
 评委只看提交材料，所以视频要让人**一眼看懂：工人全程没碰屏幕**。
 
@@ -14,14 +14,18 @@
 
 ## 分镜
 
+90 秒很紧，**每一幕都要分段录，最后在 Clipchamp 里剪掉等待和响铃的时间**（比如 Mike 那边响铃 10 秒，只留 1–2 秒）。
+
 | # | 时长 | 画面 | 你说 / 发生什么 |
 |---|---|---|---|
-| 1 | 0:00–0:10 | 摄像头大画面：你戴着手套、手里拿着东西 | 「Construction workers wear gloves, climb ladders, work in noise. They can't stop to use an app. So we built SafeLine — a safety network with **no interface**.」 |
-| 2 | 0:10–0:40 | 切到大屏（你在小窗） | 「Hey Siri, call SafeLine on speaker.」→ SafeLine：「SafeLine. What's the hazard, and where?」→ 你：「There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.」→ SafeLine 确认「warning one coworker」。大屏上字幕滚动，Zone B 隐患出现。 |
-| 3 | 0:40–0:55 | 大屏 + Google Voice 标签页 | Mike 那一路响铃，接起来听到：「Safety alert for Zone B…」，大屏上这条变成 **delivered**。旁白一句：「Mike, one floor up, gets warned in seconds.」 |
-| 4 | 0:55–1:15 | 大屏，你在小窗**不动** | 用 Google Voice（Mike）打给 SafeLine 报告 **Zone A** 的隐患 →**你口袋里的手机自动接通**，警告从口袋里播出来。旁白：「And when someone else reports a hazard in my zone, my phone answers itself. I never touched it.」 |
-| 5 | 1:15–1:30 | 大屏 | 你再打一次：「Help! Someone just fell off a ladder in Zone A!」→ SafeLine：「Help is on the way…」→ 大屏红色横幅 + 警报声，Discord `@here`。 |
-| 6 | 1:30–1:40 | 摄像头 | 「Workers never touched a screen. Any phone, any language, nothing to install. That's SafeLine.」 |
+| 1 | 0:00–0:08 | 摄像头大画面：你戴着手套、手里拿着东西 | 「Construction workers have gloves on, hands full, and no time for an app. SafeLine has **no interface**.」 |
+| 2 | 0:08–0:35 | 切到大屏（你在小窗） | 「Hey Siri, call SafeLine on speaker.」→ SafeLine：「SafeLine. What's the hazard, and where?」→ 你：「Loose plank on the level 3 scaffold, Zone B. Somebody could fall.」→ SafeLine 确认「warning one coworker」。大屏上字幕滚动，Zone B 隐患出现。 |
+| 3 | 0:35–0:47 | 大屏 + Google Voice 标签页 | Mike 那一路响铃 → 接起来听到「Safety alert for Zone B…」→ 大屏上这条变成 **delivered**。字幕卡：「Every worker in Zone B is called in seconds.」 |
+| 4 | 0:47–1:07 | 大屏，你在小窗**不动** | Mike 报告 **Zone A** 的隐患 →**你口袋里的手机自动接通**，警告从口袋里播出来。你说：「My phone answered itself. I never touched it.」 |
+| 5 | 1:07–1:20 | 大屏 | 你打进来：「Help! Someone fell off a ladder in Zone A!」→「Help is on the way…」→ 大屏红色横幅 + 警报声，Discord `@here`。 |
+| 6 | 1:20–1:28 | 摄像头 | 「No screen, no app, any phone, any language. SafeLine.」 |
+
+时间不够时的取舍：先剪第 5 幕（紧急情况），**第 4 幕（自动接听）一定要留**，它最能说明「no interface」。
 
 ## 注意
 
