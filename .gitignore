@@ -1,0 +1,9 @@
+.env
+seed.local.json
+safeline.db
+.venv/
+__pycache__/
+*.pyc
+.claude/
+SafeLine_SPEC_v2.md
+server.log

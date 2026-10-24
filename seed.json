@@ -1,0 +1,11 @@
+{
+  "zones": [
+    {"id": "A", "name": "Zone A - Ground level, east entrance"},
+    {"id": "B", "name": "Zone B - Level 3 scaffold"},
+    {"id": "C", "name": "Zone C - Loading dock"}
+  ],
+  "workers": [
+    {"name": "Presenter", "phone": "+1XXXXXXXXXX", "language": "zh", "zone": "A"},
+    {"name": "Teammate",  "phone": "+1XXXXXXXXXX", "language": "en", "zone": "B"}
+  ]
+}

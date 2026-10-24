@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeLine — Safety Manager</title>
+<style>
+  :root {
+    --bg: #0b0e13; --panel: #141922; --line: #232b38; --text: #e8edf4; --muted: #8b97a8;
+    --high: #ff4d4f; --medium: #ff9f1a; --low: #f5d90a; --ok: #2ecc71; --info: #4ea8ff;
+    --flash: rgba(78, 168, 255, 0.28);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 20px/1.4 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { display: flex; align-items: baseline; gap: 24px; padding: 18px 28px 14px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 34px; }
+  header h1 span { color: var(--high); }
+  header p { margin: 0; color: var(--muted); font-size: 20px; flex: 1; }
+  .pill { font-size: 15px; color: var(--muted); white-space: nowrap; border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 12px; }
+  #sound.off { color: var(--medium); border-color: var(--medium); cursor: pointer; }
+  #live::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ok); margin-right: 8px; }
+  #live.down::before { background: var(--high); }
+
+  #banner { display: none; margin: 16px 28px 0; padding: 18px 24px; border-radius: 14px; background: #b3171a;
+    color: #fff; cursor: pointer; animation: alarm 1s infinite; }
+  #banner.show { display: block; }
+  #banner .big { font-size: 34px; font-weight: 800; }
+  #banner .small { font-size: 20px; opacity: 0.9; margin-top: 4px; }
+  @keyframes alarm { 50% { background: #5c0b0d; } }
+
+  main { display: grid; grid-template-columns: 1fr 1.45fr 1fr; gap: 18px; padding: 18px 28px; flex: 1; min-height: 0; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    display: flex; flex-direction: column; min-height: 0; }
+  section h2 { margin: 0; padding: 14px 18px; font-size: 18px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted); border-bottom: 1px solid var(--line); }
+  .list { overflow-y: auto; padding: 8px 12px 12px; flex: 1; }
+  .empty { color: var(--muted); padding: 18px 6px; font-size: 18px; }
+  .row { border-radius: 10px; padding: 12px 14px; margin-top: 8px; background: #1a212c; transition: background-color 0.6s; }
+  .row.new { background: var(--flash); }
+
+  .line { padding: 8px 10px; margin-top: 6px; border-radius: 10px; font-size: 21px; }
+  .line .who { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: block; }
+  .line.user { background: #1d2635; } .line.user .who { color: var(--info); }
+  .line.assistant { background: #18241f; } .line.assistant .who { color: var(--ok); }
+  .line.new { background: var(--flash); }
+
+  .hazard { border-left: 8px solid var(--medium); }
+  .hazard.high { border-left-color: var(--high); }
+  .hazard.low { border-left-color: var(--low); }
+  .hazard.emergency { border-left-color: var(--high); background: #3a1416; }
+  .top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .sev { font-weight: 800; font-size: 16px; padding: 3px 10px; border-radius: 6px; color: #111; background: var(--medium); }
+  .sev.high { background: var(--high); color: #fff; } .sev.low { background: var(--low); }
+  .zone { font-weight: 700; font-size: 22px; }
+  .time { margin-left: auto; color: var(--muted); font-size: 16px; }
+  .type { font-size: 26px; font-weight: 700; margin: 6px 0 4px; }
+  .orig { font-size: 22px; } .en { color: #c6d0dd; font-size: 20px; margin-top: 2px; }
+  .tag { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 6px; margin-right: 8px; vertical-align: middle; }
+  .by { color: var(--muted); font-size: 16px; margin-top: 6px; }
+
+  .alert { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; }
+  .alert .icon { font-size: 26px; grid-row: span 2; }
+  .alert .name { font-weight: 700; font-size: 21px; }
+  .alert .lang { color: var(--muted); font-size: 15px; font-weight: 400; }
+  .alert .what { grid-column: 2 / 4; color: #c6d0dd; font-size: 17px; }
+  .chip { font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px;
+    border-radius: 999px; background: #2a3342; color: var(--muted); }
+  .chip.calling { background: var(--info); color: #051220; animation: pulse 1.2s infinite; }
+  .chip.delivered { background: var(--ok); color: #04170c; }
+  .chip.failed { background: var(--high); color: #fff; }
+  @keyframes pulse { 50% { opacity: 0.55; } }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } section { max-height: 70vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Safe<span>Line</span></h1>
+  <p>Workers never see this screen. This is the safety manager's view.</p>
+  <span id="sound" class="pill off">🔈 Click to enable alarm sound</span>
+  <span id="live" class="pill">live</span>
+</header>
+<div id="banner" title="Click to acknowledge"><div class="big"></div><div class="small"></div></div>
+<main>
+  <section><h2>Live transcript</h2><div class="list" id="transcript"></div></section>
+  <section><h2>Hazard feed</h2><div class="list" id="hazards"></div></section>
+  <section><h2>Alerts</h2><div class="list" id="alerts"></div></section>
+</main>
+<script>
+const LANG = { zh: "中文", en: "EN", es: "ES" };
+const seen = { hazards: new Set(), alerts: new Map(), lines: new Set() };
+const acked = new Set();
+let firstLoad = true, audio = null;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hms = (iso) => (iso || "").slice(11, 19);
+
+// Browsers only allow sound after a user gesture, so arm it on the first click.
+document.addEventListener("click", () => {
+  if (audio) return;
+  audio = new (window.AudioContext || window.webkitAudioContext)();
+  const s = document.getElementById("sound");
+  s.textContent = "🔊 Alarm sound on"; s.classList.remove("off");
+});
+
+function siren() {
+  if (!audio) return;
+  const t0 = audio.currentTime;
+  for (let i = 0; i < 6; i++) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = "square"; o.frequency.value = i % 2 ? 660 : 880;
+    g.gain.setValueAtTime(0.12, t0 + i * 0.35); g.gain.setValueAtTime(0, t0 + i * 0.35 + 0.3);
+    o.connect(g).connect(audio.destination); o.start(t0 + i * 0.35); o.stop(t0 + i * 0.35 + 0.32);
+  }
+}
+
+function flash(el) {
+  if (firstLoad) return;
+  el.classList.add("new");
+  setTimeout(() => el.classList.remove("new"), 3000);
+}
+
+function renderBanner(hazards) {
+  const b = document.getElementById("banner");
+  const e = hazards.find((h) => h.is_emergency && !acked.has(h.id));
+  if (!e) { b.classList.remove("show"); return; }
+  b.querySelector(".big").textContent = `🚨 EMERGENCY — ${e.zone_name}`;
+  b.querySelector(".small").textContent =
+    `${e.description_en} · reported by ${e.caller_name} at ${hms(e.created_at)} · click to acknowledge`;
+  b.onclick = () => { acked.add(e.id); b.classList.remove("show"); };
+  b.classList.add("show");
+}
+
+function renderTranscript(lines) {
+  const box = document.getElementById("transcript");
+  if (!lines.length) { box.innerHTML = '<div class="empty">Waiting for a call…</div>'; return; }
+  box.innerHTML = "";
+  for (const l of lines) {
+    const el = document.createElement("div");
+    el.className = "line " + (l.role === "assistant" ? "assistant" : "user");
+    el.innerHTML = `<span class="who">${l.role === "assistant" ? "SafeLine" : "Worker"}</span>${esc(l.text)}`;
+    box.appendChild(el);
+    if (!seen.lines.has(l.id)) { seen.lines.add(l.id); flash(el); }
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderHazards(rows) {
+  const box = document.getElementById("hazards");
+  if (!rows.length) { box.innerHTML = '<div class="empty">No hazards reported yet.</div>'; return; }
+  box.innerHTML = "";
+  for (const h of rows) {
+    const sev = (h.severity || "medium").toLowerCase();
+    const el = document.createElement("div");
+    el.className = `row hazard ${sev}` + (h.is_emergency ? " emergency" : "");
+    el.innerHTML = `
+      <div class="top">
+        <span class="sev ${esc(sev)}">${h.is_emergency ? "🚨 EMERGENCY" : esc(sev.toUpperCase())}</span>
+        <span class="zone">${esc(h.zone_name)}</span>
+        <span class="time">${hms(h.created_at)}</span>
+      </div>
+      <div class="type">${esc(h.is_emergency ? h.description_en : h.hazard_type)}</div>
+      <div class="orig"><span class="tag">${esc(LANG[h.language] || h.language)}</span>${esc(h.description_original)}</div>
+      ${h.language !== "en" && !h.is_emergency ? `<div class="en"><span class="tag">EN</span>${esc(h.description_en)}</div>` : ""}
+      <div class="by">Reported by ${esc(h.caller_name)}</div>`;
+    box.appendChild(el);
+    if (!seen.hazards.has(h.id)) {
+      seen.hazards.add(h.id); flash(el);
+      if (h.is_emergency && !firstLoad) siren();
+    }
+  }
+}
+
+function renderAlerts(rows) {
+  const box = document.getElementById("alerts");
+  if (!rows.length) { box.innerHTML = '<div class="empty">No alerts sent yet.</div>'; return; }
+  box.innerHTML = "";
+  for (const a of rows) {
+    const el = document.createElement("div");
+    el.className = "row alert";
+    const discord = a.channel === "discord";
+    const icon = discord ? "💬" : (a.is_emergency ? "🚨" : "📞");
+    const what = discord ? `Discord · ${a.is_emergency ? "URGENT @here" : a.hazard_type}`
+                         : (a.message || `${a.hazard_type} · ${a.zone_name}`);
+    el.innerHTML = `
+      <span class="icon">${icon}</span>
+      <span class="name">${esc(a.recipient_name)} ${discord ? "" : `<span class="lang">${esc(LANG[a.language] || a.language)}</span>`}</span>
+      <span class="chip ${esc(a.status)}">${esc(a.status)}</span>
+      <span class="what">${esc(what)}</span>`;
+    box.appendChild(el);
+    if (seen.alerts.get(a.id) !== a.status) { seen.alerts.set(a.id, a.status); flash(el); }
+  }
+}
+
+async function poll() {
+  try {
+    const s = await (await fetch("/api/state", { cache: "no-store" })).json();
+    renderTranscript(s.transcript);
+    renderHazards(s.hazards);
+    renderAlerts(s.alerts);
+    if (firstLoad) s.hazards.forEach((h) => h.is_emergency && acked.add(h.id));
+    renderBanner(s.hazards);
+    firstLoad = false;
+    document.getElementById("live").className = "pill";
+  } catch (e) {
+    document.getElementById("live").className = "pill down";
+  }
+}
+poll();
+setInterval(poll, 1500);
+</script>
+</body>
+</html>
