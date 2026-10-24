@@ -1,4 +1,4 @@
-"""Per-caller Vapi assistant config for inbound hazard reports.
+"""Per-caller Vapi assistant config: hazard reports, emergencies, and questions about open hazards.
 
 Field names checked against docs.vapi.ai: assistant-request response {"assistant": {...}},
 function tools with "server": {"url"}, built-in {"type": "endCall"}, deepgram nova-3 (en/es/zh),
@@ -9,7 +9,7 @@ LLM ={"provider": "openai", "model": "gpt-4.1", "temperature": 0.2}
 LANGUAGES = {
     "en": {"name": "English", "voice": {"provider": "azure", "voiceId": "andrew"},
            # "Safe Line" as two words: the TTS voice reads "SafeLine" as "Saphylline"
-           "first_message": "Safe Line. What's the hazard, and where?", "goodbye": "Stay safe. Goodbye."},
+           "first_message": "Safe Line. Report a hazard, or ask me about a zone.", "goodbye": "Stay safe. Goodbye."},
     "zh": {"name": "Mandarin Chinese (Simplified)", "voice": {"provider": "azure", "voiceId": "zh-CN-XiaoxiaoNeural"},
            "first_message": "这里是 SafeLine，请说哪里有什么隐患。", "goodbye": "注意安全，再见。"},
     "es": {"name": "Spanish", "voice": {"provider": "azure", "voiceId": "es-MX-DaliaNeural"},
@@ -20,18 +20,24 @@ INBOUND_PROMPT = """You are SafeLine, a hands-free safety line for construction 
 The caller is {name}. Speak only {language_name}.
 Keep every turn under 15 words: the caller is working and the site is noisy.
 
-Goal: capture a hazard report: which zone, what hazard, how severe.
+You do two things: take hazard reports, and answer questions about open hazards.
 Known zones: {zones}.
-If the location does not clearly match a zone, ask once which zone it is.
 
+REPORTS. Capture which zone, what hazard, how severe.
+If the location does not clearly match a zone, ask once which zone it is.
 As soon as you know the zone and the hazard, call report_hazard.
 Severity: high = could injure someone right now; medium = needs fixing today; low = minor.
 Always fill description_original with the caller's own words and description_en with an English translation.
+After report_hazard returns, confirm in one sentence that the safety manager has been alerted, then end the call.
 
-If the caller mentions an injury, a fall, fire, or says emergency / help, immediately call report_emergency,
+QUESTIONS. If the caller asks whether a zone or the site is safe, or what hazards are open, call check_zone
+(zone_id "all" for the whole site) and answer only from its result: name each open hazard briefly, or say it is clear.
+Never invent hazards, safety rules or advice. For anything check_zone cannot answer, say you don't know
+and suggest asking the supervisor. Then ask if there is anything else; if not, end the call.
+
+EMERGENCIES. If the caller mentions an injury, a fall, fire, or says emergency / help, immediately call report_emergency,
 then say help is on the way and tell them to stay where they are if it is safe.
 
-After the tool returns, confirm in one sentence that the safety manager has been alerted, then end the call.
 Never ask the caller to look at a screen or open an app.
 When you say the product name out loud, write it as "Safe Line" (two words)."""
 
@@ -89,6 +95,19 @@ def _report_tools(zone_ids: list[str], webhook_url: str) -> list[dict]:
                         "description_en": {**text, "description": "English translation of the caller's words."},
                     },
                     "required": ["zone_id", "description_original", "description_en"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "server": server,
+            "function": {
+                "name": "check_zone",
+                "description": "Look up open (not yet resolved) hazards for one zone, or 'all' for the whole site.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"zone_id": {"type": "string", "enum": zone_ids + ["all"]}},
+                    "required": ["zone_id"],
                 },
             },
         },

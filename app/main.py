@@ -129,7 +129,24 @@ def handle_report_emergency(args: dict, call: dict, caller: dict, tasks: Backgro
             "say_to_caller": "Help is on the way. Stay where you are if it is safe."}
 
 
-TOOL_HANDLERS = {"report_hazard": handle_report_hazard, "report_emergency": handle_report_emergency}
+def handle_check_zone(args: dict, call: dict, caller: dict, tasks: BackgroundTasks) -> dict:
+    zone_ids = {z["id"] for z in SEED["zones"]}
+    zone_id = str(args.get("zone_id", "all")).strip().upper()
+    zone_id = zone_id if zone_id in zone_ids else None
+    hazards = db.open_hazards(zone_id)
+    return {
+        "scope": zone_name(zone_id) if zone_id else "whole site",
+        "open_hazards": len(hazards),
+        "details": [
+            {"zone": zone_name(h["zone_id"]), "severity": h["severity"], "reported_at": h["created_at"][11:16],
+             "hazard": f"EMERGENCY: {h['description_en']}" if h["is_emergency"] else h["hazard_type"]}
+            for h in hazards[:5]
+        ],
+    }
+
+
+TOOL_HANDLERS = {"report_hazard": handle_report_hazard, "report_emergency": handle_report_emergency,
+                 "check_zone": handle_check_zone}
 
 
 # ---------- routes ----------

@@ -118,6 +118,12 @@ def set_resolved(hazard_id: int, resolved: bool) -> None:
     _exec("UPDATE hazards SET resolved_at = ? WHERE id = ?", (now() if resolved else None, hazard_id))
 
 
+def open_hazards(zone_id: str | None = None) -> list[dict]:
+    if zone_id:
+        return _query("SELECT * FROM hazards WHERE resolved_at IS NULL AND zone_id = ? ORDER BY id DESC", (zone_id,))
+    return _query("SELECT * FROM hazards WHERE resolved_at IS NULL ORDER BY id DESC")
+
+
 def open_counts_by_zone() -> dict[str, dict]:
     rows = _query("SELECT zone_id, COUNT(*) AS open, MAX(is_emergency) AS emergency FROM hazards"
                   " WHERE resolved_at IS NULL GROUP BY zone_id")
