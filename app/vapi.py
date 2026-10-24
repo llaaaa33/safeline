@@ -16,7 +16,8 @@ LLM = {"provider": "openai", "model": "gpt-4.1", "temperature": 0.2}
 
 LANGUAGES = {
     "en": {"name": "English", "voice": {"provider": "azure", "voiceId": "andrew"},
-           "first_message": "SafeLine. What's the hazard, and where?", "goodbye": "Stay safe. Goodbye."},
+           # "Safe Line" as two words: the TTS voice reads "SafeLine" as "Saphylline"
+           "first_message": "Safe Line. What's the hazard, and where?", "goodbye": "Stay safe. Goodbye."},
     "zh": {"name": "Mandarin Chinese (Simplified)", "voice": {"provider": "azure", "voiceId": "zh-CN-XiaoxiaoNeural"},
            "first_message": "这里是 SafeLine，请说哪里有什么隐患。", "goodbye": "注意安全，再见。"},
     "es": {"name": "Spanish", "voice": {"provider": "azure", "voiceId": "es-MX-DaliaNeural"},
@@ -39,7 +40,8 @@ If the caller mentions an injury, a fall, fire, or says emergency / help, immedi
 then say help is on the way and tell them to stay where they are if it is safe.
 
 After the tool returns, confirm in one sentence, including how many coworkers are being warned, then end the call.
-Never ask the caller to look at a screen or open an app."""
+Never ask the caller to look at a screen or open an app.
+When you say the product name out loud, write it as "Safe Line" (two words)."""
 
 ALERT_PROMPT = """You are SafeLine, calling a construction worker with a safety alert.
 Speak only {language_name}. Keep every turn under 15 words.
@@ -47,7 +49,8 @@ You have already said: "{message}"
 Facts: zone = {zone_name}; hazard = {hazard_type}; report = {description_en}.
 Answer brief questions about this one hazard only. For anything else, say you can only talk about this alert.
 When the worker acknowledges, says thanks, or has no questions, call endCall.
-Never ask the worker to look at a screen or open an app."""
+Never ask the worker to look at a screen or open an app.
+When you say the product name out loud, write it as "Safe Line" (two words)."""
 
 
 def lang_cfg(language: str) -> dict:

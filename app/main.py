@@ -224,7 +224,15 @@ async def vapi_webhook(request: Request, tasks: BackgroundTasks):
         roles = {"user": "user", "bot": "assistant", "assistant": "assistant"}
         lines = [(roles[m["role"]], (m.get("message") or m.get("content") or "").strip())
                  for m in msg.get("messages") or [] if m.get("role") in roles]
-        lines = [(role, text) for role, text in lines if text]
+        merged: list[tuple[str, str]] = []  # Vapi splits one turn into fragments; show one line per turn
+        for role, text in lines:
+            if not text:
+                continue
+            if merged and merged[-1][0] == role:
+                merged[-1] = (role, f"{merged[-1][1]} {text}")
+            else:
+                merged.append((role, text))
+        lines = merged
         if lines:
             db.replace_transcript(call.get("id", "unknown"), lines)
         return {}

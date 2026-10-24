@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 SCENARIOS = {
     "hazard": {
-        "lines": [("assistant", "SafeLine. What's the hazard, and where?"),
+        "lines": [("assistant", "Safe Line. What's the hazard, and where?"),
                   ("user", "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.")],
         "tool": "report_hazard",
         "args": {
@@ -30,7 +30,7 @@ SCENARIOS = {
         "after": ("assistant", "Got it. Warning one coworker in Zone B now."),
     },
     "emergency": {
-        "lines": [("assistant", "SafeLine. What's the hazard, and where?"),
+        "lines": [("assistant", "Safe Line. What's the hazard, and where?"),
                   ("user", "Help! Someone just fell off a ladder in Zone A!")],
         "tool": "report_emergency",
         "args": {
