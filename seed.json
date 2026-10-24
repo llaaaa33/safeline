@@ -5,7 +5,7 @@
     {"id": "C", "name": "Zone C - Loading dock"}
   ],
   "workers": [
-    {"name": "Presenter", "phone": "+1XXXXXXXXXX", "language": "zh", "zone": "A"},
+    {"name": "Presenter", "phone": "+1XXXXXXXXXX", "language": "en", "zone": "A"},
     {"name": "Teammate",  "phone": "+1XXXXXXXXXX", "language": "en", "zone": "B"}
   ]
 }

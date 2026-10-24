@@ -38,7 +38,8 @@ app = FastAPI(title="SafeLine", lifespan=lifespan)
 # ---------- roster helpers ----------
 
 def _digits(phone: str | None) -> str:
-    return "".join(c for c in (phone or "") if c.isdigit())[-10:]
+    d = "".join(c for c in (phone or "") if c.isdigit())
+    return d[-10:] if len(d) >= 10 else ""  # placeholders like +1XXXXXXXXXX never match
 
 
 def find_worker(phone: str | None) -> dict | None:

@@ -1,8 +1,9 @@
 """Fake a Vapi call against the local backend (no phone, no Vapi credits).
 
-    python scripts/simulate_tool_call.py              # demo step 1: Chinese hazard report, zone B
+    python scripts/simulate_tool_call.py              # demo step 1: hazard report, zone B
     python scripts/simulate_tool_call.py emergency    # demo step 5: fall from a ladder, zone A
-    python scripts/simulate_tool_call.py assistant    # print the assistant Vapi would get for Phone A
+    python scripts/simulate_tool_call.py assistant    # print the assistant Vapi would get for the presenter
+    (hazard-zh / emergency-zh: the same in Chinese)
 """
 import argparse
 import json
@@ -16,6 +17,30 @@ ROOT = Path(__file__).resolve().parent.parent
 
 SCENARIOS = {
     "hazard": {
+        "lines": [("assistant", "SafeLine. What's the hazard, and where?"),
+                  ("user", "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.")],
+        "tool": "report_hazard",
+        "args": {
+            "zone_id": "B",
+            "hazard_type": "loose scaffold plank",
+            "severity": "high",
+            "description_original": "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.",
+            "description_en": "There's a loose plank on the level 3 scaffold in Zone B. Somebody could fall.",
+        },
+        "after": ("assistant", "Got it. Warning one coworker in Zone B now."),
+    },
+    "emergency": {
+        "lines": [("assistant", "SafeLine. What's the hazard, and where?"),
+                  ("user", "Help! Someone just fell off a ladder in Zone A!")],
+        "tool": "report_emergency",
+        "args": {
+            "zone_id": "A",
+            "description_original": "Help! Someone just fell off a ladder in Zone A!",
+            "description_en": "Help! Someone just fell off a ladder in Zone A!",
+        },
+        "after": ("assistant", "Help is on the way. Stay where you are if it is safe."),
+    },
+    "hazard-zh": {
         "lines": [("assistant", "这里是 SafeLine，请说哪里有什么隐患。"), ("user", "B区三楼脚手架有一块木板松了，很危险。")],
         "tool": "report_hazard",
         "args": {
@@ -27,7 +52,7 @@ SCENARIOS = {
         },
         "after": ("assistant", "收到，已记录。正在通知B区的同事。"),
     },
-    "emergency": {
+    "emergency-zh": {
         "lines": [("assistant", "这里是 SafeLine，请说哪里有什么隐患。"), ("user", "救命，A区有人从梯子上摔下来了")],
         "tool": "report_emergency",
         "args": {
@@ -55,11 +80,10 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("scenario", nargs="?", default="hazard", choices=[*SCENARIOS, "assistant"])
     p.add_argument("--url", default="http://localhost:8000/vapi/webhook")
-    p.add_argument("--from", dest="caller", help="caller phone (default: first zh worker in the roster)")
+    p.add_argument("--from", dest="caller", help="caller phone (default: first worker in the roster)")
     a = p.parse_args()
 
-    workers = load_seed()["workers"]
-    caller = a.caller or next((w["phone"] for w in workers if w["language"] == "zh"), workers[0]["phone"])
+    caller = a.caller or load_seed()["workers"][0]["phone"]
     call = {"id": f"sim-{uuid.uuid4().hex[:8]}", "type": "inboundPhoneCall", "customer": {"number": caller}}
 
     if a.scenario == "assistant":
