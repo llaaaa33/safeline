@@ -11,11 +11,12 @@ SEVERITY_ICON = {"high": "🔴", "medium": "🟠", "low": "🟡"}
 LANGUAGE_TAG = {"en": "EN", "zh": "中文", "es": "ES"}
 
 
-async def send_discord(content: str, urgent: bool = False) -> bool:
+async def send_discord(content: str, urgent: bool = False) -> bool | None:
+    """True = sent, False = failed, None = Discord not configured."""
     url = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
     if not url:
         log.warning("DISCORD_WEBHOOK_URL not set; skipping Discord message")
-        return False
+        return None
     # Webhooks only ping @here when allowed_mentions permits it.
     payload = {"content": content[:1990], "allowed_mentions": {"parse": ["everyone"] if urgent else []}}
     try:

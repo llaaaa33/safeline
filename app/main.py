@@ -78,7 +78,7 @@ async def alert_manager(hazard_id: int, discord_alert_id: int) -> None:
         ok = await notify.send_discord(notify.format_emergency(hazard, zname), urgent=True)
     else:
         ok = await notify.send_discord(notify.format_hazard(hazard, zname))
-    db.update_alert(discord_alert_id, status="delivered" if ok else "failed")
+    db.update_alert(discord_alert_id, status={True: "delivered", False: "failed", None: "skipped"}[ok])
 
 
 # ---------- tool handlers (must return fast) ----------

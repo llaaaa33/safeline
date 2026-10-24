@@ -369,7 +369,8 @@ function render(s) {
 async function poll() {
   try {
     const s = await (await fetch("/api/state", { cache: "no-store" })).json();
-    if (firstLoad) s.hazards.forEach((h) => h.is_emergency && acked.add(h.id));
+    // on (re)load, only emergencies from the last 2 minutes still raise the banner
+    if (firstLoad) s.hazards.forEach((h) => h.is_emergency && Date.now() - new Date(h.created_at) > 120000 && acked.add(h.id));
     state = s;
     render(s);
     firstLoad = false;
