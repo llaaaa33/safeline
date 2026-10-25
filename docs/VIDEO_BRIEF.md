@@ -10,12 +10,12 @@ You are making the **demo video** for a hackathon submission (c0mpiled-16 @ UCSD
 
 ## What SafeLine is (say this accurately)
 
-- **Vision:** an **earpiece every construction worker wears all day**. To report a hazard or ask a question, they press one button and just talk, in their own language. No app, no screen, hands stay on the job.
-- **What exists today: the software.** An AI voice agent behind a phone number, a backend, and the safety manager's web dashboard. **In the prototype, a phone call stands in for the earpiece**; the backend is the same either way.
+- **SafeLine is a device, not a hotline.** The final product is a **small voice device each worker wears all day, like the walkie-talkie they already carry**. Press once and talk, in their own language — but instead of a noisy shared channel, they talk to an AI that logs the hazard, alerts the safety manager and answers questions. No app, no screen, hands stay on the job.
+- **What exists today: the software behind the device.** An AI voice agent, a backend, and the safety manager's web dashboard. **In the prototype, a phone call stands in for the device**; the backend is the same either way.
 - A worker can **report a hazard**, **report an emergency**, and **ask whether a zone is safe** (the agent reads open hazards back from the live database).
 - The **safety manager** sees each report within seconds on the dashboard (live call captions, hazard feed with the worker's own words, a zone board: Clear / Open / Emergency) and ticks hazards off when they are fixed.
 
-Do not claim the earpiece hardware exists. Earpiece imagery is welcome but must carry an on-screen **"Concept"** label.
+Never call it a "safety line" or "hotline". Do not claim the hardware exists: device imagery (a compact walkie-talkie-style unit or a clip-on earpiece) is welcome but must carry an on-screen **"Concept"** label.
 
 ## Inputs from the founder
 
@@ -38,7 +38,7 @@ Composite an animated **phone call screen in the bottom-right corner** over the 
   1. **Calling…** (about 1.5 s, ringback tone).
   2. **Connected** with a running timer (00:01, 00:02, …), a small "speaking" waveform, and a caption bubble showing the current line labelled **Safe Line** or **Worker**.
   3. **Call ended** (the agent hangs up by itself) for about 1 s, then the phone fades out.
-- Put a small tag above the phone: **"Prototype: a phone call stands in for the earpiece"**.
+- Put a small tag above the phone: **"Prototype: a phone call stands in for the device"**.
 - Recommended (honest, and judges respect it): a tiny **"Reenacted call"** label on the phone, since the call audio is re-voiced.
 
 ### Call audio
@@ -70,8 +70,8 @@ If the "after" recording includes the manager clicking **Mark resolved**, show i
 |---|---|---|
 | 0:00–0:07 | Construction-site b-roll (stock is fine) or `story.png` | "My family has a background in construction. Most crews we know still talk over walkie-talkies." |
 | 0:07–0:20 | Walkie-talkie close-ups or `pain.png` | "But a radio is still an interface. You need a free hand to push to talk. Everyone shares one noisy channel, so if you weren't listening, you missed it. Nothing is recorded. And crews speak different languages." |
-| 0:20–0:29 | **Concept** visual of a worker with an earpiece, hands busy (label "Concept"), then `product.png` | "Safe Line is a safety line with no interface: an earpiece every worker wears. Press once, and just talk." |
-| 0:29–0:33 | Text card: "Today's prototype is the software. A phone call stands in for the earpiece." | (read the card) |
+| 0:20–0:29 | **Concept** visual of a worker wearing a small walkie-talkie-style device, hands busy (label "Concept"), then `product.png` | "Safe Line is a voice safety device. It works like the radio you already carry — press once and talk — but instead of a noisy channel, you're talking to an A.I. that listens." |
+| 0:29–0:33 | Text card: "Today's prototype is the software. A phone call stands in for the device." | (read the card) |
 | 0:33–0:50 | **Call 1** over the "before" recording → cut to "after" | No narration during the call. After the cut, one line: "The safety manager sees it in seconds, in the worker's own words." |
 | 0:50–1:06 | **Call 2** (question) over the "after" recording | Lower-third: "Workers ask by voice. Answers come from live site data." |
 | 1:06–1:15 | Manager clicks **Mark resolved** → Zone B green (if recorded; otherwise `dash_resolved.png`) | "When it's fixed, the manager checks it off. Nothing reported by voice gets lost." |
@@ -98,6 +98,7 @@ Editing notes: cut dead air, keep the call snappy (no long pauses between lines)
 
 - [ ] ≤ 90 s, 1920×1080, even audio levels, captions on every spoken line
 - [ ] The phone overlay never covers the zone cards, and the dashboard visibly updates when Call 1 ends
-- [ ] "Concept" label on any earpiece imagery, and the prototype tag on the phone
+- [ ] "Concept" label on any device imagery, and the prototype tag on the phone
+- [ ] SafeLine is presented as a device (never a "safety line" or "hotline")
 - [ ] No personal phone numbers visible (the Safe Line number is fine)
 - [ ] The link plays in a private/incognito window

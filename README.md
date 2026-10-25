@@ -1,15 +1,15 @@
-# SafeLine — a no-interface safety line for construction sites
+# SafeLine — a hands-free voice safety device for construction workers
 
 **c0mpiled-16 @ UCSD · Track: No App**
 
-A worker reports a hazard by **calling and talking** — in their own language, hands still on the job. An AI voice agent asks at most one follow-up, logs the report, and the **safety manager is alerted in seconds**: a live site dashboard (with an alarm for emergencies) and a Discord message. Workers never look at a screen; the only screen belongs to the manager, who ticks each hazard off when it is fixed.
+SafeLine works like the walkie-talkie a worker already carries: **press once and talk**, in their own language, hands still on the job. But there is no noisy shared channel — the worker is talking to an AI agent that logs the hazard, **alerts the safety manager in seconds** (live dashboard with an alarm for emergencies, plus Discord), and **answers questions** like "Is Zone B safe right now?" from live site data. Workers never look at a screen; the only screen belongs to the manager, who ticks each hazard off when it is fixed.
 
-In the real product a worker wears a cellular earpiece that dials SafeLine with one button. SafeLine only sees a phone call, so it works the same from a phone, a flip phone, an earpiece or a smart hard hat.
+**This repo is the software behind the device.** In the prototype a phone call stands in for the device: the agent, backend and dashboard are the same whether the voice comes from a phone or a wearable radio.
 
 ## How it works
 
 ```
-Worker's phone / earpiece ──► Vapi (phone number, speech-to-text, LLM, text-to-speech)
+Worker's device (prototype: a phone call) ──► Vapi (voice connection, speech-to-text, LLM, text-to-speech)
                                  │  webhooks: assistant-request, tool-calls, conversation-update, status
                                  ▼
                            FastAPI backend ──► SQLite
@@ -18,7 +18,7 @@ Worker's phone / earpiece ──► Vapi (phone number, speech-to-text, LLM, tex
 ```
 
 1. **Inbound call** → Vapi asks the backend for an assistant (`assistant-request`). The backend looks the caller up in the site roster and returns an assistant that listens and speaks in that worker's language (English, Chinese, Spanish).
-2. The assistant calls `report_hazard` (zone, hazard, severity, the worker's words, English translation) or `report_emergency`. The backend stores it, answers instantly, and posts to Discord in the background.
+2. The assistant calls `report_hazard` (zone, hazard, severity, the worker's words, English translation), `report_emergency`, or `check_zone` (reads open hazards back to the worker). The backend stores reports, answers instantly, and posts to Discord in the background.
 3. **Dashboard**: live call captions, hazard feed, and a zone board (Clear / N open / Emergency). Emergencies raise a red banner and a siren.
 4. **Resolve**: the manager ticks *Mark resolved* on a hazard; it moves to the resolved list and its zone turns green once nothing is open.
 

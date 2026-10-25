@@ -16,7 +16,7 @@ LANGUAGES = {
            "first_message": "SafeLine. ¿Cuál es el peligro y dónde está?", "goodbye": "Cuídese. Adiós."},
 }
 
-INBOUND_PROMPT = """You are SafeLine, a hands-free safety line for construction workers.
+INBOUND_PROMPT = """You are SafeLine, the voice inside a hands-free safety device that construction workers carry.
 The caller is {name}. Speak only {language_name}.
 Keep every turn under 15 words: the caller is working and the site is noisy.
 
