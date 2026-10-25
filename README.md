@@ -8,7 +8,9 @@ SafeLine works like the walkie-talkie a worker already carries: press once and t
 - **answers questions** — "Is Zone B safe right now?" It reads the open hazards back from live site data;
 - **handles emergencies** — "Help, someone fell off a ladder!" It says help is on the way and raises an alarm.
 
-Workers never look at a screen. The only screen belongs to the safety manager: a live dashboard with the conversation as it happens, a hazard feed with the worker's own words, and a zone board (Clear / Open / Emergency). Emergencies trigger a banner and a siren, and the manager checks each hazard off when it is fixed.
+Workers never look at a screen. The only screen belongs to the safety manager: a live dashboard with the conversation as it happens, a hazard feed with the worker's own words, and a zone board (Clear / Open / Emergency). The manager checks each hazard off when it is fixed.
+
+**Alerts:** every new report plays a chime on the dashboard and posts to Discord. An emergency adds a full-width red banner with a siren, turns its zone red, and sends a Discord `@here`.
 
 **This repository is the software behind the device.** In the prototype, a phone call stands in for the device; the agent, backend and dashboard are the same either way.
 
