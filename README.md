@@ -2,8 +2,6 @@
 
 **A hands-free voice safety device for construction workers.** c0mpiled-16 @ UCSD · Track: No App
 
-▶ **Demo video:** https://drive.google.com/file/d/16ygSLMzTSzDFKzY7zUwzC0UcMA6kIr-Z/view?usp=drive_link
-
 SafeLine works like the walkie-talkie a worker already carries: press once and talk, in their own language, hands still on the job. But there is no noisy shared channel — the worker is talking to an AI agent that:
 
 - **logs hazards** — "There's a loose plank on the level 3 scaffold in Zone B." The agent asks one follow-up only if something is missing, then confirms the safety manager has been alerted;
